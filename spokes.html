@@ -40,60 +40,124 @@
 	      transform-origin: 50% bottom;
       }
     </style>
-</head>
-<body>
+
     <script>
-      function goButton()
+    function getUrlParams(urlString)
+    {
+      params = {}
+      if (urlString.length)
       {
-        var numSpokesEl = document.getElementById("numSpokesId");
-        var spokeWidthEl = document.getElementById("spokeWidthId")
-        var goButtonEl = document.getElementById("goButtonId");
-        var inputDivEl = document.getElementById("inputDivId");
-        var spokesDivEl = document.getElementById("spokesDivId");
-        var spokeEl = document.getElementById("spokeId");
+          restOfIt = urlString.substr(1)
+          splits = restOfIt.split('&')
 
-        var numSpokes = numSpokesEl.value;
-        var spokeWidth = spokeWidthEl.value;
-
-        inputDivEl.hidden = false;
-        spokesDivEl.hidden = false;
-
-
-        var spokesDivWidth = spokesDivEl.clientWidth;
-        var spokesDivHeight = spokesDivEl.clientHeight;
-
-        var rotationStep = 360 / numSpokes;
-        var currentRotation = 0;
-
-        for (currentSpoke = 0; currentSpoke < numSpokes; currentSpoke++)
-        {
-          var newSpoke = document.createElement("div");
-
-          spokesDivEl.appendChild(newSpoke);
-
-          newSpoke.hidden = false;
-          newSpoke.classList.add("spokeClass");
-
-          transformStr = "translateX(" + spokesDivWidth / 2 + "px) rotateZ(" + currentRotation + "deg)";
-          newSpoke.style.transform = transformStr;
-          newSpoke.style.height = spokesDivHeight / 2 + "px";
-          newSpoke.style.width = spokeWidth + "px";
-
-          currentRotation += rotationStep;
-        }
-
+          splits.forEach( function(element)
+          {
+             if (element.search('=') > -1)
+             {
+                theseTwo = element.split('=')
+                params[theseTwo[0]] = theseTwo[1]
+             }
+             else
+             {
+                params[element] = element
+             }
+          })
       }
+      return params
+    }
+
+    // ----------------------------------------------------------------------
+    function genSpokes(numSpokes, spokeWidth, spokesDivEl)
+    {
+      var spokesDivWidth = spokesDivEl.clientWidth
+      var spokesDivHeight = spokesDivEl.clientHeight
+
+      var rotationStep = 360 / numSpokes
+      var currentRotation = 0
+
+      for (currentSpoke = 0; currentSpoke < numSpokes; currentSpoke++)
+      {
+          var newSpoke = document.createElement("div")
+
+          spokesDivEl.appendChild(newSpoke)
+
+          newSpoke.hidden = false
+          newSpoke.classList.add("spokeClass")
+
+          transformStr = "translateX(" + spokesDivWidth / 2 + "px) translateY(5px) rotateZ(" + currentRotation + "deg)"
+          newSpoke.style.transform = transformStr
+          newSpoke.style.height = (spokesDivHeight / 2) - 5 + "px"
+          newSpoke.style.width = spokeWidth + "px"
+
+          currentRotation += rotationStep
+      }
+    }
+
     </script>
-      <br>
-      <div id="inputDivId">
-        <span>num:</span>
-        <input type="number" name="numSpokes" min="1" max="50" value="8" id="numSpokesId"><br><br>
-        <span>width:</span>
-        <input type="number" name="spokeWidth" min="1" max="25" value="1" id="spokeWidthId"><br><br>
-        <input type="button" value="go" onclick="goButton()" id="goButtonId">
-      </div>
-      <div id="spokesDivId" class="spokesDivClass" hidden="true">
-      </div>
-    </div>
+</head>
+<body onload="onBodyLoad()" onresize="onBodyResize()">
+   <script>
+      const DefaultSpokesWidth = 1
+      const SpokeWidthParam = 'spokeWidth'
+      const NumSpokesParam = 'spokes'
+
+      var currentNumSpokes = 1
+      var currentSpokeWidth = 1
+
+      var numGenerations = 0
+
+      // ----------------------------------------------------------------------
+      function onBodyLoad()
+      {
+         params = getUrlParams(window.location.search)
+
+         if (params[NumSpokesParam])
+         {
+            const spokesWidth = (params[SpokeWidthParam]) ? params[SpokeWidthParam] : DefaultSpokesWidth
+            // genSpokes(params[NumSpokesParam], spokesWidth, document.getElementById("spokesDivId"))
+            go(params[NumSpokesParam], spokesWidth, document.getElementById("spokesDivId"))
+         }
+      }
+
+      // ----------------------------------------------------------------------
+      function onBodyResize()
+      {
+         if (numGenerations > 0) // thanks for the resize on load, Microsoft!
+         {
+            spokesDiv = document.getElementById("spokesDivId")
+            var dupNode = spokesDiv.cloneNode(false);
+            spokesDiv.parentNode.replaceChild(dupNode, spokesDiv)
+
+            go(currentNumSpokes, currentSpokeWidth, document.getElementById("spokesDivId"))
+         }
+      }
+
+      // ----------------------------------------------------------------------
+      function go(numSpokes, spokeWidth)
+      {
+         currentNumSpokes = numSpokes
+         currentSpokeWidth = spokeWidth
+
+         var inputDivEl = document.getElementById("inputDivId")
+         var spokesDivEl = document.getElementById("spokesDivId")
+
+         inputDivEl.hidden = true
+         spokesDivEl.hidden = false
+
+         genSpokes(currentNumSpokes, currentSpokeWidth, spokesDivEl)
+         numGenerations++
+      }
+   </script>
+
+   <br>
+   <div id="inputDivId" style="margin:10px">
+     <span>num:</span>
+     <input type="number" name="numSpokes" min="1" value="8" id="numSpokesId"><br><br>
+     <span>width(px):</span>
+     <input type="number" name="spokeWidth" min="1" value="1" id="spokeWidthId"><br><br>
+     <input type="button" value="go" onclick="go(document.getElementById('numSpokesId').value, document.getElementById('spokeWidthId').value)" id="goButtonId">
+   </div>
+   <div id="spokesDivId" class="spokesDivClass" hidden="true">
+   </div>
 </body>
 </html>

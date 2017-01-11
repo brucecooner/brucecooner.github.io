@@ -1,10 +1,233 @@
-<!DOCTYPE html>
-<html>
-<body>
-<h1>Bruce Cooner's Minimalist Website</h1>
-<p>Toys!</P>
-<ul>
-<a href="spokes.html">spokes with CSS</a>
-</ul>
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/tr/html4/loose.dtd">
+<html lang="en">
+<head>
+    <title>Bruce Cooner's Personal Website</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Bruce Cooner">
+    <meta name="description" content="personal website">
+
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+</head>
+<body onload="onBodyLoad()">
+   <!-- <script src="assets/strings.js"></script> -->
+   <script src="libs/flickr.js"></script>
+   <script src="libs/jquery-3.1.1.min.js"></script>
+    <script>
+         const photographyColumnId = 'photographyColumnId'
+         // todo : get rid of other magic strings here
+         var columnIds = ['codeColumnId', photographyColumnId, 'craftColumnId']
+
+        var someCode = "default";
+
+         <!-- --------------------------------------------------------------- -->
+         function onBodyLoad()
+         {
+            buildWorkHistory()
+
+            photosStart(handleSomePhotos)
+
+            // testing...
+            // var getCodeXHR = new XMLHttpRequest();
+            // getCodeXHR.open("GET", "./assets/SomeText.txt", true);
+            // getCodeXHR.onload = function (e)
+            // {
+            //    if (getCodeXHR.readyState === 4)
+            //    {
+            //       if (getCodeXHR.status === 200)
+            //       {
+            //          //console.log(getCodeXHR.responseText);
+            //          someCode = getCodeXHR.responseText;
+            //       }
+            //       else
+            //       {
+            //          console.error(getCodeXHR.statusText);
+            //       }
+            //    }
+            // };
+            // getCodeXHR.onerror = function (e)
+            // {
+            //    console.error(getCodeXHR.statusText);
+            // };
+            // getCodeXHR.send(null);
+         }
+
+         // -------------------------------------------------------------------
+        function clickColumn(clickedColumnId)
+        {
+            elem = document.getElementById(clickedColumnId)
+
+            // only grow a non-grown column
+            if (elem.className.includes("flexColumnMin"))
+            {
+                columnIds.forEach(function (id) {
+                    elem = document.getElementById(id)
+                    if (id == clickedColumnId)
+                    {
+                        elem.classList.remove("flexColumnMin")
+                        elem.classList.add("flexColumnFocus")
+                    }
+                    else
+                    {
+                        // and shrink the others
+                        elem.classList.remove("flexColumnFocus")
+                        elem.classList.add("flexColumnMin")
+                    }
+                });
+            }
+
+        }
+
+      // -------------------------------------------------------------------
+      function buildWorkHistory()
+      {
+         // var workHistoryDiv = document.getElementById("workHistoryDivId")
+         //
+         // workExperience.forEach( function(currentElement)
+         // {
+         //    var currentDiv = document.createElement("div")
+         //    var timespanEl = document.createElement("p")
+         //    timespanEl.innerHTML = `From ${currentElement.start} until ${currentElement.end}`
+         //
+         //    currentDiv.appendChild(timespanEl)
+         //
+         //    var titleEl = document.createElement("p")
+         //    titleEl.innerHTML = `Title: ${currentElement.title}`
+         //    currentDiv.appendChild(titleEl)
+         //
+         //    workHistoryDiv.appendChild(currentDiv)
+         // })
+      }
+
+      // --------------------------------------------------------------------
+      function addPhotoHighlight(event)
+      {
+         event.currentTarget.classList.add("photoHighlight")
+      }
+      // --------------------------------------------------------------------
+      function removePhotoHighlight(event)
+      {
+         event.currentTarget.classList.remove("photoHighlight")
+      }
+
+      // --------------------------------------------------------------------
+      function photoClicked(event)
+      {
+         // A for maintainability, F for readability
+         photoColumnEl = $(`#${photographyColumnId}`)[0]
+
+         if ( false == photoColumnEl.classList.contains('flexColumnFocus') )
+         {
+            // console.log('NO OPEN')
+            event.preventDefault()
+         }
+         else
+         {
+            // console.log('YES OPEN')
+         }
+      }
+
+      // --------------------------------------------------------------------
+      function handleSomePhotos(photosArray)
+      {
+         // append 'em to something
+         var photoDiv = document.getElementById('photographyForegroundDivId')
+
+         // oooh, that's a bad iterator name given the context, should fix that
+         photosArray.forEach( function(currentPhoto)
+         {
+            newImgContainerEl = document.createElement('div')
+            newImgContainerEl.classList.add("photographyImgContainerDiv")
+            newImgContainerEl.addEventListener('mouseover', addPhotoHighlight )
+            newImgContainerEl.addEventListener('mouseout', removePhotoHighlight )
+
+            urlString = flickrPhotoInfoToUrl(currentPhoto)
+            newImgEl = document.createElement("img")
+            newImgEl.src = urlString
+            newImgEl.alt = currentPhoto['title']
+            newImgEl.classList.add("photographyImg")
+            newImgEl.addEventListener('click', photoClicked )
+
+            newImgAnchor = document.createElement("a")
+            newImgAnchor.href = flickrPhotoInfoToPhotoPage(currentPhoto)
+            newImgAnchor.target = "_blank"
+            newImgAnchor.appendChild(newImgEl)
+
+            // newImgContainerEl.appendChild(newImgEl)
+            newImgContainerEl.appendChild(newImgAnchor)
+
+            if (currentPhoto['title'])
+            {
+               photoNameSpanEl = document.createElement("span")
+               photoNameSpanEl.innerHTML =  currentPhoto['title']
+               newImgContainerEl.appendChild(photoNameSpanEl)
+            }
+
+            photoDiv.appendChild(newImgContainerEl)
+         })
+      }
+
+      // ---------------------------------------------------------------------
+      // returns normalized amount of scroll on element
+      function currentScrollAmount(element)
+      {
+         var maxScroll = element.scrollHeight - element.offsetHeight
+         var amount = element.scrollTop / maxScroll
+
+         return amount
+      }
+
+      // ---------------------------------------------------------------------
+      function onPhotosScroll()
+      {
+         var photosEl = document.getElementById('photographyForegroundDivId')
+
+         var scrollAmount = currentScrollAmount(photosEl)
+
+         if (scrollAmount > 0.75 && (false == gettingPhotos))
+         {
+            getMorePhotos()
+         }
+      }
+    </script>
+
+    <div class="mainContainer">
+        <header class="mainHeader">
+          <h1>Bruce Cooner Dot Com (v0.1)</h1>
+          <!-- <div class='socialIcons'>
+            <a href="http://www.flickr.com/photos/woodbits/" target="_blank" title="visit my photo page"><img src="https://s.yimg.com/pw/images/goodies/black-flickr.png" width="56" height="26" alt=""></a>
+         </div> -->
+        </header>
+        <div class="flexContainer">
+            <div class="flexColumnMin codeColumnClass" id="codeColumnId" onclick="clickColumn('codeColumnId')">
+                <h1>HE CODES!</h1>
+                <div class="codeBackgroundDivClass">
+                </div>
+                <div class="codeForegroundDivClass">
+                   <span>Still under construction here, but you can check out my </span>
+                   <a href="https://github.com/brucecooner/" target="_blank">git hub repo</a>
+                   <span> to see what I create and contribute to.<span>
+                   <br><br>
+                   <span>And <a href="spokes.html" target="_blank">here's</a> a little thing I wrote to generate radial lines because I couldn't find a decent gimp plugin to do it in a hurry.</span>
+               </div>
+            </div>
+            <div class="flexColumnMin photographyColumnClass" id="photographyColumnId" onclick="clickColumn('photographyColumnId')">
+                <h1>HE CAPTURES!</h1>
+                <div class='photographyBackgroundDivClass'>
+                </div>
+                <div class='photographyForegroundDivClass' id='photographyForegroundDivId' onscroll='onPhotosScroll()'>
+               </div>
+            </div>
+            <div class="flexColumnMin craftColumnClass" id="craftColumnId" onclick="clickColumn('craftColumnId')">
+                <h1>HE CREATES!</h1>
+                <div class="craftBackgroundDivClass">
+                </div>
+                <div class="craftForegroundDivClass">
+                   <span>Still under construction here, but you can check out my </span>
+                   <a href="http://shoholastar.etsy.com/" target="_blank">Etsy shop</a>
+                   <span> to see (and purchase if you like) some of the wooden jewelry I've made.<span>
+         </div>
+        </div>
+    </div>
 </body>
 </html>

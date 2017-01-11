@@ -1,0 +1,365 @@
+﻿html, body
+{
+    height:100%;
+    width:100%;
+    margin:0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow:hidden;
+}
+
+h1
+{
+    margin:0px 0px 0px 0px;
+}
+
+a
+{
+   color:white;
+}
+
+.mainContainer
+{
+    height:100%;
+    width:100%;
+    background-color:red;
+    margin:0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+}
+
+.mainHeader
+{
+   width:100%;
+
+  color:#DDDDDD;
+  background-color: gray;
+}
+
+.mainHeader h1
+{
+   width:auto;
+   padding: 3px 8px 3px 8px;
+}
+
+.mainHeader .socialIcons
+{
+   position:absolute;
+   right: 0px;
+   top:0px;
+
+   margin:5px 5px 5px 5px;
+}
+
+.flexContainer
+{
+    height:100%;
+    width:100%;
+    background-color:red;
+    margin:0px 0px 0px 0px;
+    display:flex;
+    flex-direction:row;
+}
+
+.flexColumnMin
+{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+
+    transition: all 0.65s;
+}
+
+.flexColumnFocus
+{
+    flex:12;
+    min-width:0;
+    overflow:hidden;
+
+    transition: all 0.65s;
+}
+
+.flexColumnMin h1
+{
+    color:white;
+
+    transition: opacity 1s;
+
+    transform: rotate(90deg);
+  	transform-origin: left bottom;
+    white-space:nowrap;
+    float:left;
+    margin:0;
+    opacity:0.85;
+    z-index: 1;
+}
+
+.flexColumnFocus h1
+{
+   color:white;
+   opacity:0.0;
+
+   transition: opacity 1s;
+
+   transform: rotate(90deg);
+   transform-origin: left bottom;
+   white-space:nowrap;
+   float:left;
+   margin:0;
+}
+
+.codeColumnClass
+{
+   background-color:#380202;
+   position:relative;
+   top:0px;
+   left:0px;
+}
+
+.codeBackgroundDivClass
+{
+    padding:0 0 0 0;
+    margin:0 0 0 0;
+    border:0 0 0 0;
+    width:100%;
+    height:200%;
+    position:relative;
+    top:-200px;
+    background-image:url('assets/OnesZeroes3.png');
+    transform: skew(0deg, -20deg);
+    opacity: 0.15;
+}
+
+.codeForegroundDivClass
+{
+   padding:0 0 0 0;
+   margin:0 0 0 0;
+   border:0 0 0 0;
+   width:100%;
+   height:100%;
+   position:absolute;
+   top:0px;
+   left:0px;
+
+   color:white;
+   opacity:0.0;
+
+   z-index: 100;
+   transition:opacity 1s;
+}
+
+.flexColumnFocus .codeForegroundDivClass
+{
+   color:lightgray;
+   opacity:1.0;
+
+   z-index: 100;
+
+   transition:opacity 1s;
+}
+
+.photographyImgContainerDiv
+{
+   display:inline-block;
+   border-width: 0px 0px 0px 0px;
+
+   position:relative;
+   padding: 0px 0px 0px 0px;
+   margin: 10px 10px 10px 10px;
+
+   vertical-align:middle;
+}
+
+.photographyImgContainerDiv a
+{
+   display:inline-block;
+}
+
+.photographyImgContainerDiv span
+{
+   color:lightgray;
+   font-size: 0.8em;
+   opacity:0.0;
+
+   position:absolute;
+   left:6px;
+   top:6px;
+
+   transition: all 0.5s;
+}
+
+.photoHighlight span
+{
+   color:white;
+   font-size: 0.8em;
+   background-color: black;
+   opacity:0.35;
+
+   padding: 3px 3px 3px 3px;
+   border-radius: 6px;
+
+   position:absolute;
+   left:8px;
+   top:8px;
+
+   transition: all 0.5s;
+}
+
+.photoHighlight span:hover
+{
+   color:white;
+   font-size: 0.8em;
+   background-color: #0b2042;
+   opacity:0.85;
+
+   padding: 3px 3px 3px 3px;
+   border-radius: 6px;
+
+   cursor:none;
+
+   position:absolute;
+   left:8px;
+   top:8px;
+
+   transition: all 0.5s;
+}
+
+.photographyImg
+{
+  border-style:solid;
+  border-width: 4px 4px 4px 4px;
+  border-color: gray;
+  background-color:red;
+
+  transition: all 0.25s;
+}
+
+.photographyImg:hover
+{
+   cursor:default;
+}
+
+.photoHighlight .photographyImg
+{
+  border-style:solid;
+  border-width: 4px 4px 4px 4px;
+  border-color: white;
+  background-color:red;
+
+  transition: all 0.25s;
+}
+
+.photographyColumnClass
+{
+   background-color: #000000;
+   position:relative;
+   top:0px;
+   left:0px;
+}
+
+.photographyBackgroundDivClass
+{
+   padding:0 0 0 0;
+   margin:0 0 0 0;
+   border:0 0 0 0;
+   width:100%;
+   height:100%;
+   position:absolute;
+   top: 0px;
+   left: 0px;
+
+   background-image:url('assets/Rebel550D.jpeg');
+   background-repeat:no-repeat;
+   background-position: center;
+
+   opacity: 0.5;
+   transition: opacity 0.5s;
+}
+
+.flexColumnFocus .photographyBackgroundDivClass
+{
+   opacity:0.35;
+   transition: opacity 0.5s;
+}
+
+.photographyForegroundDivClass
+{
+   padding:0 0 0 0;
+   margin:0 0 0 0;
+   border:0 0 0 0;
+   width:100%;
+   height:100%;
+   position:absolute;
+   top:0px;
+   left:0px;
+
+   color:white;
+   opacity:0.0;
+
+   z-index: 100;
+   transition:opacity 0.5s;
+
+   overflow-x: hidden;
+   overflow-y:scroll;
+}
+
+.flexColumnFocus .photographyForegroundDivClass
+{
+   color:lightgray;
+   opacity:1.0;
+
+   z-index: 100;
+
+   transition:opacity 1s;
+}
+
+
+.craftColumnClass
+{
+   background-color:#050238;
+
+   position:relative;
+   top:0px;
+   left:0px;
+}
+
+.craftBackgroundDivClass
+{
+    padding:0 0 0 0;
+    margin:0 0 0 0;
+    border:0 0 0 0;
+    width:100%;
+    height:200%;
+    position:relative;
+    opacity: 0.15;
+}
+
+.craftForegroundDivClass
+{
+   padding:0 0 0 0;
+   margin:0 0 0 0;
+   border:0 0 0 0;
+   width:100%;
+   height:100%;
+   position:absolute;
+   top:0px;
+   left:0px;
+
+   color:white;
+   opacity:0.0;
+
+   z-index: 100;
+   transition:opacity 1s;
+
+   overflow-y:scroll;
+   overflow-x:scroll;
+}
+
+.flexColumnFocus .craftForegroundDivClass
+{
+   color:lightgray;
+   opacity:1.0;
+
+   z-index: 100;
+
+   transition:opacity 1s;
+}

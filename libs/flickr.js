@@ -42,7 +42,7 @@ function getPhotosPage(pageNum, pageSize, callback)
    console.log(`getting photo page ${pageNum}`)
 
    // const requestUrl = 'http://localhost:3000'
-   const requestUrl = 'http://brucecooner.herokuapp.com'
+   const requestUrl = 'https://brucecooner.herokuapp.com'
 
    let requestString = requestUrl
    requestString += '/photos/' + flickrUserId

@@ -39,6 +39,15 @@
         background-color:black;
 	      transform-origin: 50% bottom;
       }
+
+      @media print
+      {
+         body *
+         {
+            visibility: visible;
+            background-color:red;
+         }
+      }
     </style>
 
     <script>
@@ -114,7 +123,6 @@
          if (params[NumSpokesParam])
          {
             const spokesWidth = (params[SpokeWidthParam]) ? params[SpokeWidthParam] : DefaultSpokesWidth
-            // genSpokes(params[NumSpokesParam], spokesWidth, document.getElementById("spokesDivId"))
             go(params[NumSpokesParam], spokesWidth, document.getElementById("spokesDivId"))
          }
       }

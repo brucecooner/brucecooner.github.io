@@ -4,9 +4,10 @@ var GraphicsCommands =
    // output commands
    cmd_clear:'clear',
    cmd_line:'line',
-   cmd_circle:'circle', 
+   cmd_circle:'circle',
    // state commands
-   cmd_setLineDash:'setLineDash',
+   cmd_setLineDash:'setLineDash',   // TODO : make a draw param
+   cmd_setDrawParameter:'setDrawParameter',
 
    // functions that return graphics command objects
    clear:function()
@@ -20,4 +21,7 @@ var GraphicsCommands =
 
    setLineDash:function(dashSequence)
    { return { command:'setLineDash', parameters:{dashSequence}}},
+
+   setDrawParameter:function(parameterName, value)
+   { return { command:'setDrawParameter', parameters:{parameterName, value} }}
 }

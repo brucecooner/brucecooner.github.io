@@ -5,15 +5,17 @@ var DrawModeContinuous =
       this.name = 'freeform'
       this.drawEngine = drawEngine
 
-      this.lastLineStart = null
+      this.lastLineStart = {}
 
-      this.onMouseMove = function(event)
+      // -----------------------------------------------------------------------
+      this.onCursorMove = function()
       {
          if (this.drawEngine.mouseButtonDown)
          {
             const minDelta = 3
             // has mouse gone far enough to generate another line?
-            currentPoint = this.drawEngine.mouseCoords
+            currentPoint = this.drawEngine.cursorCoords // this.drawEngine.mouseCoords
+            // console.log(`dmc onCursorMove currentPoint:${currentPoint.x},${currentPoint.y}`)
 
             var xDiff = currentPoint.x - this.lastLineStart.x
             var yDiff = currentPoint.y - this.lastLineStart.y
@@ -25,19 +27,23 @@ var DrawModeContinuous =
                gCommands.push( GraphicsCommands.setDrawParameter('strokeStyle', '#000000'))
                gCommands.push( GraphicsCommands.line(this.lastLineStart, currentPoint) )
                this.drawEngine.drawOutputGraphics(gCommands)
-               this.lastLineStart = currentPoint
+
+               Object.assign(this.lastLineStart, currentPoint)
             }
          }
       }.bind(this)
 
+      // -----------------------------------------------------------------------
       this.onMouseUp = function(event)
       {
       }.bind(this)
 
+      // -----------------------------------------------------------------------
       this.onMouseDown = function(event)
       {
          // begin new stroke
-         this.lastLineStart = this.drawEngine.mouseCoords   // this betta be write only
+         //this.lastLineStart = this.drawEngine.mouseCoords   // this betta be write only
+         Object.assign(this.lastLineStart, this.drawEngine.cursorCoords)
 
       }.bind(this)
 

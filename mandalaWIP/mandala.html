@@ -14,6 +14,7 @@
     <script src="libs/utility.js"></script>
     <script src="libs/myRangeInput.js"></script>
     <script src="libs/WatchedValue.js"></script>
+    <script src="libs/debugDiv.js"></script>
 
     <script src="graphicsCommands.js"></script>
     <script src="graphicsEngine.js"></script>
@@ -22,6 +23,7 @@
     <script src="drawModeContinuous.js"></script>
     <script src="drawModeCircles.js"></script>
     <script src="drawModeErase.js"></script>
+    <script src="cursorEngine.js"></script>
     <script src="drawEngine.js"></script>
     <script src="mandala.js"></script>
     <!-- <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' /> -->
@@ -38,27 +40,31 @@
       -guide distance markers
       -undo
       -help!
+      -shortcut keys!
+      -unobtrusive way to see num petals
+      -configurable color journey
+      -line choices (size, shape, helix?, etc.)
    -TECH:
+      -detect when graphics execute does/does not get an array!
+      -should the canvas just fill the damn window?
+      -break out rendering ?
+      -render reflected objects with workers?
       -smoother freeform lines
       -detect/handle cursor leaving canvas with button down
       -hide cursor points when cursor not on draw canvas
       -store local origin/transform in graphicsEngine, work completely in mandala space
       -get handle on naming functions in mandala, general functionality
       -cleaner logic around the mirror stuff
-   -OUTPUT:
-      -save drawing canvas to file?
-      -print option?
-      -should be making svg's?
+      -use library for event listening attach
    -LAYOUT:
-      -center the canvas
       -show/hide config?
       -prettify config
-      -config to side panel
    BUGS:
+   -freeform should allow single pixels
    -eraser doesn't work unless moving, can't click-erase
    -jerkiness in continuous draw mode? seems okay, for now
    -redraw cursor points when line is cancelled
-   -freeform mode 'sticks' if cursor leaves canvas with button down
+   -eraser needs to perform true transparency on canvas
    -->
 
    <script>
@@ -76,12 +82,89 @@
    const canvasY = 0
 
    // drawing
-   var lastPoint = null
-
-   // tracking crap
-   var buttonDown = false
-
    var drawEngine = null
+
+   const delayBeforeColorJourneyStart = 55
+   const colorJourneyTransitionTime = 60 * 2 // seconds
+
+   // --------------------------------------------------------------------------
+   function randomValue(floor, ceiling)
+   {
+      return Math.floor(Math.random() * (ceiling-floor)) + floor
+   }
+
+   // --------------------------------------------------------------------------
+   function dropTwoComponents(rgb)
+   {
+      choose  = Math.floor(Math.random() * 3)
+      switch (choose)
+      {
+         case 0 :
+            dropped1 = 0
+            dropped2 = 1
+            kept = 2
+            break
+         case 1 :
+            kept = 0
+            dropped1 = 1
+            dropped2 = 2
+            break
+         default:
+         case 2 :
+            dropped1 = 0
+            kept = 1
+            dropped2 = 2
+      }
+
+      rgb[dropped1] = '00'
+      rgb[dropped2] = '00'
+
+      // avoid full bright pure colors
+      rgb[kept] = randomValue(185, 225).toString(16)
+   }
+
+   // --------------------------------------------------------------------------
+   function generateRandomColor()
+   {
+      const min = 170
+      const max = 255
+
+      var rgb = [
+         randomValue(min, max).toString(16),
+         randomValue(min, max).toString(16),
+         randomValue(min, max).toString(16)]
+
+      // drop a component...or two
+      if (Math.random() < 0.5)
+      {
+         if (Math.random() < 0.25)
+         {
+            console.log(`colorjourney:dropping two components`)
+
+            dropTwoComponents(rgb)
+         }
+         else
+         {
+            console.log(`colorjourney:dropping one component`)
+            rgb[Math.floor(Math.random() * 3)] = '00'
+         }
+      }
+
+      return `#${rgb[0]}${rgb[1]}${rgb[2]}`
+   }
+
+   // --------------------------------------------------------------------------
+   function getNextColor()
+   {
+      nextColor = generateRandomColor()
+      console.log(`next color:${nextColor}`)
+
+      bodyEl = document.getElementsByTagName('body')[0]
+
+      bodyEl.style['background-color'] = nextColor //colorJourney[randomIndex]
+      bodyEl.style.transition = `all ${colorJourneyTransitionTime}s`
+      setTimeout(getNextColor, colorJourneyTransitionTime * 1000)
+   }
 
    // --------------------------------------------------------------------------
    // canvases
@@ -89,7 +172,10 @@
    // --------------------------------------------------------------------------
    function createCanvases( config )
    {
-      var bod = $("body")[0]
+      var canvasContainerEl = document.getElementById('canvasContainerId')
+
+      var left = `${canvasContainerEl.clientWidth / 2 - canvasSize / 2}px`
+      var top = `${canvasContainerEl.clientHeight / 2 - canvasSize / 2}px`
 
       canvasOrder.forEach( function(currentId)
       {
@@ -98,10 +184,13 @@
          cvs.id = currentId
          cvs.width = config.canvasSize;
          cvs.height = config.canvasSize;
-         cvs.left = config.canvasX;
-         cvs.top = config.canvasY;
 
-         bod.appendChild(cvs)
+         // cvs.left = config.canvasX;
+         // cvs.top = config.canvasY;
+         cvs.style.left = left
+         cvs.style.top  = top
+
+         canvasContainerEl.appendChild(cvs)
       })
 
    }
@@ -227,8 +316,7 @@
    {
       graphicsCommands.forEach( function(currentCommand)
       {
-         // test for transformation
-         if (transformHandlers.hasOwnProperty(currentCommand.command))
+         if ( transformHandlers.hasOwnProperty(currentCommand.command))
          {
             transformedCommands = transformHandlers[currentCommand.command](currentCommand)
             outputGraphicsEngine.execute(transformedCommands)
@@ -247,7 +335,7 @@
       graphicsCommands.forEach( function(currentCommand)
       {
          // test for transformation
-         if (transformHandlers.hasOwnProperty(currentCommand.command))
+         if ( transformHandlers.hasOwnProperty(currentCommand.command))
          {
             transformedCommands = transformHandlers[currentCommand.command](currentCommand)
             cursorGraphicsEngine.execute(transformedCommands)
@@ -288,6 +376,20 @@
    }
 
    // --------------------------------------------------------------------------
+   // INTERFACE UTILITY STUFF
+   var numPetalsTimeoutFunc = 0
+   function showNumPetals(num)
+   {
+      $('#numPetalsSpanId').html(num)
+      $('#numPetalsSpanId').addClass('shown')
+      if (numPetalsTimeoutFunc != 0)
+      {
+         clearTimeout(numPetalsTimeoutFunc);
+      }
+      numPetalsTimeoutFunc = setTimeout(function(){ $('#numPetalsSpanId.shown').removeClass('shown').addClass('transparent') }, 1000);
+   }
+
+   // --------------------------------------------------------------------------
    // SETUP
    // --------------------------------------------------------------------------
    var mandala = new Mandala.Mandala()
@@ -295,7 +397,8 @@
    var numPetals = WatchedValue.Create(mandala.numPetals,
       [function(value) {   mandala.numPetals = value
                            renderGuides()
-                           $('#numPetalsSpanId').html(value) }])
+                           showNumPetals(value)
+                           }])
 
    var petalsOffset = WatchedValue.Create(mandala.petalsOffset,
       [function(value) {   mandala.petalsOffset = value
@@ -351,7 +454,7 @@
 
       // --- UI INIT ---
       // TODO: better way to do this?
-      $('#numPetalsSpanId').html(mandala.numPetals)
+      // $('#numPetalsSpanId').html(mandala.numPetals)
       $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
       // checkboxes
       $('#halfGuidesCheckboxId')[0].checked = mandala.drawHalfGuides
@@ -360,26 +463,25 @@
 
       // DRAW
       render()
+
+      // use it a while before starting
+      setTimeout( getNextColor, delayBeforeColorJourneyStart * 1000 )
    }
 
    // ---------------------------------------------------------
    function onClearDrawingButton()
    {
-      // TODO: do via output graphics engine
-      // var cvs = $(`#${drawingCanvasId}`)[0]
-      // var ctx = cvs.getContext("2d");
-      // ctx.clearRect(0, 0, cvs.width, cvs.height);
       outputGraphicsEngine.execute( [GraphicsCommands.clear()] )
    }
 
    // ---------------------------------------------------------
-   function onDoubleSpokesButton()
+   function onDoublePetalsButton()
    {
-      numPetals.set(mandala.numPetals * 2)
+      numPetals.set(Math.min(mandala.numPetals * 2, Mandala.maxPetals))
    }
 
    // ---------------------------------------------------------
-   function onHalveSpokesButton()
+   function onHalvePetalsButton()
    {
       if (0 == mandala.numPetals % 2 && mandala.numPetals >= 4)
       {
@@ -390,7 +492,7 @@
    // ----------------------------------------------------------------------
    function onPlusOneSpokeButton()
    {
-      numPetals.set(mandala.numPetals + 1)
+      numPetals.set(Math.min(mandala.numPetals + 1, Mandala.maxPetals))
    }
    function onMinusOneSpokeButton()
    {
@@ -438,29 +540,77 @@
       drawEngine.setDrawMode(event.target.value)
    }
 
+   // --------------------------------------------------------------------------
+   // copies specified canvas, (which is assumed to have no background), fills
+   // background of new canvas (white), and opens in new window
+   function viewCanvas(fromCanvas)
+   {
+      var oldCtx = fromCanvas.getContext("2d")
+
+      var newCanvas = document.createElement("canvas")
+      var newCtx = newCanvas.getContext("2d")
+
+      newCanvas.id = 'Mandala'
+      newCanvas.width = fromCanvas.width
+      newCanvas.height = fromCanvas.height
+
+      data = oldCtx.getImageData(0, 0, newCanvas.width, newCanvas.height)
+
+      newCtx.putImageData( data, 0, 0 )
+
+      // var compositeOperation = oldCtx.globalCompositeOperation
+
+      newCtx.globalCompositeOperation = 'destination-over'
+      newCtx.fillStyle = '#FFFFFF'
+      newCtx.fillRect(0,0, newCanvas.width, newCanvas.height)
+
+       var dataURL = newCanvas.toDataURL("image/jpeg");
+
+       window.open(dataURL)
+   }
+
+   // --------------------------------------------------------------------------
+   function onClickViewButton()
+   {
+      canvasEl = document.getElementById(drawingCanvasId)
+
+      viewCanvas(canvasEl)
+   }
+
    </script>
 
    <div id='configDivId'>
-      <span>number of petals:</span>
-      <button id='halveSpokesButtonId' onclick='onHalveSpokesButton()'>&lt;&lt;</button>
-      <button id='PlusOneSpokeButtonId' onclick='onMinusOneSpokeButton()'>-</button>
+      <span>petals</span>
+      <br>
       <div id='numPetalsRangeContainer' style='display:inline-block;'></div>
+      <br>
+      <button id='halveSpokesButtonId' onclick='onHalvePetalsButton()'>&lt;&lt;</button>
+      <button id='PlusOneSpokeButtonId' onclick='onMinusOneSpokeButton()'>-</button>
       <button id='PlusOneSpokeButtonId' onclick='onPlusOneSpokeButton()'>+</button>
-      <button id='doubleSpokesButtonId' onclick='onDoubleSpokesButton()'>&gt;&gt;</button>
-      <span id='numPetalsSpanId'>n/a</span>
+      <button id='doubleSpokesButtonId' onclick='onDoublePetalsButton()'>&gt;&gt;</button>
+      <br>
       <div id='petalsOffsetRangeContainer' style='display:inline-block;'></div>
-      <span>half guides:</span><input type='checkbox' id='halfGuidesCheckboxId' checked='true' onchange="onChangeDrawHalfGuides(event)">
-      <span>show guides:</span><input type='checkbox' id='showGuidesCheckboxId' checked='true' onchange="onChangeDrawGuides(event)">
-      <span>mirror guides:</span><input type='checkbox' id='mirrorGuidesCheckboxId', checked='false' onchange='onChangeMirrorGuides(event)'>
+      <br>
+      <span>show :</span><input type='checkbox' id='showGuidesCheckboxId' checked='true' onchange="onChangeDrawGuides(event)">
+      <br>
+      <span>half:</span><input type='checkbox' id='halfGuidesCheckboxId' checked='true' onchange="onChangeDrawHalfGuides(event)">
+      <br>
+      <span>mirror:</span><input type='checkbox' id='mirrorGuidesCheckboxId', checked='false' onchange='onChangeMirrorGuides(event)'>
+      <br>
       <br>
       <select id='drawModeSelectId' onchange='onChangeDrawMode(event)'>
+         <option value='freeform'>Freeform</option>
          <option value='lines'>Lines</option>
          <option value='circles'>Circles</opotion>
-         <option value='freeform'>Freeform</option>
-         <option value='erase'>Erase</option>
+         <!-- <option value='erase'>Erase</option> -->
       </select>
+      <br>
       <button id='clearDrawingButtonId' onclick='onClearDrawingButton()'>Clear</button>
+      <br>
+      <button id='viewButtonId' onclick='onClickViewButton()'>View</button>
    </div>
 
-   <!-- <canvas id="myCanvasId" width="1500" height="1500" style="border:1px solid #000000;"> -->
-</canvas>
+   <div id="canvasContainerId">
+      <span id='numPetalsSpanId' class='transparent'>69</span>
+   </div>
+</body>

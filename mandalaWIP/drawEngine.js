@@ -2,6 +2,7 @@
 // and some drawing, I guess?
 // TODO:
 //    -mode notification of change!
+
 var DrawEngine =
 {
    // --------------------------------------------------------------------------
@@ -14,6 +15,7 @@ var DrawEngine =
    DrawEngine:function(config)
    {
       // consts
+      // TODO:it's overkill to recreate these, create once and reuse
       this.drawModesFactory =
       {
          freeform:function(drawEngine)  { return new DrawModeContinuous.DrawModeContinuous(drawEngine) },
@@ -24,6 +26,7 @@ var DrawEngine =
 
       // --- properties ---
       this.mouseCoords = { x:0, y:0 }
+      this.cursorCoords = {x:0, y:0 }
       this.mouseButtonDown = false
       this.isRightMB = false  // TODO:  better name
 
@@ -35,6 +38,29 @@ var DrawEngine =
       this.drawOutputGraphics = config.drawOutputGraphics
       this.cursorMoveCallback = config.cursorMoveCallback
 
+      // -----------------------------------------------------------------------
+      // called when cursor engine moves the cursor
+      this.onCursorMove = function(cursorCoords)
+      {
+         Object.assign(this.cursorCoords, cursorCoords)
+         // console.log(`de cur move to ${this.cursorCoords.x},${this.cursorCoords.y}`)
+
+         // TODO: move rendering to its own function(s)
+         cursorCommands = [GraphicsCommands.clear()]
+         circleCommand = GraphicsCommands.circle(this.cursorCoords.x, this.cursorCoords.y, 3)
+         cursorCommands.push(circleCommand)
+
+         this.drawCursorGraphics(cursorCommands)
+
+         this.currentDrawMode.onCursorMove()
+
+         this.cursorMoveCallback(this.cursorCoords)
+      }
+
+      ceConfig = { cursorMoveCallback:this.onCursorMove.bind(this) }
+      this.cursorEngine = new CursorEngine.CursorEngine(ceConfig)
+
+      // -----------------------------------------------------------------------
       // --- handlers ---
       onMouseDown = function(event)
       {
@@ -57,22 +83,26 @@ var DrawEngine =
       }
       onMouseMove = function(event)
       {
+         console.log('de mouse move')
          this.mouseCoords = getRelativeCoordinates(event, this.inputCanvas)
-         // console.log(`drawEngine.onMouseMove() mode:${this.currentDrawMode.name}`)
-         // console.log(`(${this.mouseCoords.x},${this.mouseCoords.y})`)
-         // draw cursor marker
-         // TODO: fix magic number
-         //cursorCommands = [GraphicsCommands.clear()].concat(this.crossAt(this.mouseCoords, 5))
-         cursorCommands = [GraphicsCommands.clear()]
-         circleCommand = GraphicsCommands.circle(this.mouseCoords.x, this.mouseCoords.y, 3)
-         cursorCommands.push(circleCommand)
 
-         this.drawCursorGraphics(cursorCommands)
-
-         this.currentDrawMode.onMouseMove(event)
-
-         this.cursorMoveCallback(this.mouseCoords)
+         this.cursorEngine.setTargetPoint(this.mouseCoords)
       }
+
+      // -----------------------------------------------------------------------
+      onMouseOut = function()
+      {
+         console.log('de mouse out')
+         this.mouseButtonDown = false
+
+         if (this.currentDrawMode.hasOwnProperty('onMouseOut'))
+         {
+            this.currentDrawMode.onMouseOut()
+         }
+
+         this.drawCursorGraphics([GraphicsCommands.clear()])
+      }
+
 
       // -----------------------------------------------------------------------
       this.setDrawMode = function(modeName)
@@ -92,24 +122,10 @@ var DrawEngine =
          }
       }
 
-      // -----------------------------------------------------------------------
-      // convenience func, builds commands to draw pointer at specified point
-      // receives: point:{x,y}, width:number
-      //  returns: [ GraphicsCommand, ...]
-      this.crossAt = function(point, halfWidth)
-      {
-         commands = []
-
-         commands.push( GraphicsCommands.line( {x:point.x, y:point.y - halfWidth},
-                                                {x:point.x, y:point.y + halfWidth}))
-         commands.push( GraphicsCommands.line( {x:point.x - halfWidth, y:point.y},
-                                                {x:point.x + halfWidth, y:point.y}))
-         return commands
-      }
-
       this.inputCanvas.addEventListener("mousedown", onMouseDown.bind(this))
       this.inputCanvas.addEventListener("mouseup", onMouseUp.bind(this))
       this.inputCanvas.addEventListener("mousemove", onMouseMove.bind(this))
+      this.inputCanvas.addEventListener("mouseout", onMouseOut.bind(this))
       this.setDrawMode('freeform')
    }
 

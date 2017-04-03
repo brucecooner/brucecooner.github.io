@@ -19,6 +19,7 @@
     <script src="graphicsCommands.js"></script>
     <script src="graphicsEngine.js"></script>
 
+    <script src="colorJourney.js"></script>
     <script src="drawModeLines.js"></script>
     <script src="drawModeContinuous.js"></script>
     <script src="drawModeCircles.js"></script>
@@ -78,97 +79,61 @@
    // order in which canvases are created
    const canvasOrder = [ drawingCanvasId, guidesCanvasId, cursorCanvasId ]
 
-   const canvasX = 500
-   const canvasY = 0
+   // ==========================================================================
+   const delayBeforeColorJourneyStart = 55
+   const minColorJourneySpeed = 3
+   const maxColorJourneySpeed = 60 * 3
+   const defaultColorJourneyScale = 0.5
 
    // drawing
    var drawEngine = null
-
-   const delayBeforeColorJourneyStart = 55
-   const colorJourneyTransitionTime = 60 * 2 // seconds
+   var colorJourney = null
 
    // --------------------------------------------------------------------------
-   function randomValue(floor, ceiling)
+   // returns color speed given a normalized scale value
+   function getColorJourneySpeed(scale)
+   { return minColorJourneySpeed + ((maxColorJourneySpeed-minColorJourneySpeed)*scale)}
+
+   // --------------------------------------------------------------------------
+   // receives:value-normalized speed of color speed transitions
+   function setColorJourneySpeed(scale)
    {
-      return Math.floor(Math.random() * (ceiling-floor)) + floor
+      console.log(`setting color journey scale:${scale}`)
+      colorJourney.setSpeed(getColorJourneySpeed(1 - scale))
    }
 
    // --------------------------------------------------------------------------
-   function dropTwoComponents(rgb)
+   var menuDivIds = ['petalsConfigDivId', 'colorsConfigDivId']
+
+   // --------------------------------------------------------------------------
+   function showConfigMenu(menuDivId)
    {
-      choose  = Math.floor(Math.random() * 3)
-      switch (choose)
+      console.log(`showMenu : ${menuDivId}`)
+      var numDivs = $('.configDivClass').length
+      console.log(`num divs: ${numDivs}`)
+
+      $('.configDivClass').each( function()
       {
-         case 0 :
-            dropped1 = 0
-            dropped2 = 1
-            kept = 2
-            break
-         case 1 :
-            kept = 0
-            dropped1 = 1
-            dropped2 = 2
-            break
-         default:
-         case 2 :
-            dropped1 = 0
-            kept = 1
-            dropped2 = 2
-      }
+         isShown = this.id == menuDivId
 
-      rgb[dropped1] = '00'
-      rgb[dropped2] = '00'
-
-      // avoid full bright pure colors
-      rgb[kept] = randomValue(185, 225).toString(16)
+         $(this).toggleClass('visible', isShown)
+         $(this).toggleClass('menu_transparent', !isShown)
+      })
    }
 
    // --------------------------------------------------------------------------
-   function generateRandomColor()
+   function dismissConfigMenus()
    {
-      const min = 170
-      const max = 255
-
-      var rgb = [
-         randomValue(min, max).toString(16),
-         randomValue(min, max).toString(16),
-         randomValue(min, max).toString(16)]
-
-      // drop a component...or two
-      if (Math.random() < 0.5)
+      $('.configDivClass').each( function()
       {
-         if (Math.random() < 0.25)
-         {
-            console.log(`colorjourney:dropping two components`)
-
-            dropTwoComponents(rgb)
-         }
-         else
-         {
-            console.log(`colorjourney:dropping one component`)
-            rgb[Math.floor(Math.random() * 3)] = '00'
-         }
-      }
-
-      return `#${rgb[0]}${rgb[1]}${rgb[2]}`
-   }
-
-   // --------------------------------------------------------------------------
-   function getNextColor()
-   {
-      nextColor = generateRandomColor()
-      console.log(`next color:${nextColor}`)
-
-      bodyEl = document.getElementsByTagName('body')[0]
-
-      bodyEl.style['background-color'] = nextColor //colorJourney[randomIndex]
-      bodyEl.style.transition = `all ${colorJourneyTransitionTime}s`
-      setTimeout(getNextColor, colorJourneyTransitionTime * 1000)
+         $(this).toggleClass('visible', false)
+         $(this).toggleClass('menu_transparent', true)
+      })
    }
 
    // --------------------------------------------------------------------------
    // canvases
-   // receives: config {canvasOrder, canvasSize, canvasX, canvasY}
+   // receives: config {canvasOrder, canvasSize }
    // --------------------------------------------------------------------------
    function createCanvases( config )
    {
@@ -185,8 +150,6 @@
          cvs.width = config.canvasSize;
          cvs.height = config.canvasSize;
 
-         // cvs.left = config.canvasX;
-         // cvs.top = config.canvasY;
          cvs.style.left = left
          cvs.style.top  = top
 
@@ -390,6 +353,72 @@
    }
 
    // --------------------------------------------------------------------------
+   function toggleMirroring()
+   {
+      mirrorGuides.set( !mandala.mirrorGuides )
+
+      if ( false == mandala.mirrorGuides )
+      {
+         mandala.mirrorLine = null
+      }
+      $('#mirrorGuidesCheckboxId')[0].checked = mandala.mirrorGuides
+   }
+
+   // --------------------------------------------------------------------------
+   function toggleShowGuides()
+   {
+      drawGuides.set( !mandala.drawGuides ) // mandala.drawHalfGuides ? false : true )<<this works long as initial state is right
+      $('#showGuidesCheckboxId')[0].checked = mandala.drawGuides
+      renderGuides()
+   }
+
+   // --------------------------------------------------------------------------
+   function toggleHalfGuides()
+   {
+      drawHalfGuides.set( !mandala.drawHalfGuides ) // mandala.drawHalfGuides ? false : true )<<this works long as initial state is right
+      $('#halfGuidesCheckboxId')[0].checked = mandala.drawHalfGuides
+      renderGuides()
+   }
+
+   // --------------------------------------------------------------------------
+   // function onWheel(event)
+   // {
+   //    console.log(`wheel detail:${event.originalEvent.detail}`)
+   // }
+
+   // --------------------------------------------------------------------------
+   function bodyOnKeyUp(event)
+   {
+      switch (event.originalEvent.key)
+      {
+         case 'x':
+         case 'X':
+            outputGraphicsEngine.execute( [GraphicsCommands.clear()] )
+         break;
+         case '<':
+         case ',':
+            onHalvePetalsButton()
+         break;
+         case '>':
+         case '.':
+            onDoublePetalsButton()
+         break
+         case 'm':
+         case 'M':
+            toggleMirroring()
+         break
+         case 'h':
+         case 'H':
+            toggleHalfGuides()
+         break
+         case 'g':
+         case 'G':
+            toggleShowGuides()
+         break;
+      }
+   }
+
+   // --------------------------------------------------------------------------
    // SETUP
    // --------------------------------------------------------------------------
    var mandala = new Mandala.Mandala()
@@ -420,7 +449,7 @@
    // ---------------------------------------------------------
    function onBodyLoad()
    {
-      createCanvases(  {canvasOrder, canvasSize, canvasX, canvasY} )
+      createCanvases({canvasOrder, canvasSize})
 
       $('#cursorCanvasId')[0].oncontextmenu = function(){return false;}
       // TODO: set opacity dynamically
@@ -454,7 +483,6 @@
 
       // --- UI INIT ---
       // TODO: better way to do this?
-      // $('#numPetalsSpanId').html(mandala.numPetals)
       $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
       // checkboxes
       $('#halfGuidesCheckboxId')[0].checked = mandala.drawHalfGuides
@@ -464,8 +492,19 @@
       // DRAW
       render()
 
-      // use it a while before starting
-      setTimeout( getNextColor, delayBeforeColorJourneyStart * 1000 )
+      // color journey stuff
+      let colorJourneySpeedCallback = myRangeInput.createRange({id:'colorJourneySpeedId',
+            containerId:'colorJourneySpeedContainer',
+            onInputHandler:setColorJourneySpeed,
+            initialValue:defaultColorJourneyScale,
+            min:0, max:1, step:0.1})
+
+      colorJourney = new ColorJourney.ColorJourney({node:document.getElementsByTagName('body')[0],
+                                       departureTime:delayBeforeColorJourneyStart,
+                                       changePeriod:getColorJourneySpeed(defaultColorJourneyScale)})
+
+      $('body').on('keyup', bodyOnKeyUp)
+      // $('body').on('mousewheel DOMMouseScroll', onWheel)
    }
 
    // ---------------------------------------------------------
@@ -573,15 +612,33 @@
    function onClickViewButton()
    {
       canvasEl = document.getElementById(drawingCanvasId)
-
       viewCanvas(canvasEl)
+   }
+
+   // --------------------------------------------------------------------------
+   function onPlayPauseColorJourneyButton()
+   {
+      playState = colorJourney.togglePlaying()
+
+      $('#playPauseColorJourneyButtonId')[0].innerHTML = playState ? '||' : '>'
+   }
+
+   // --------------------------------------------------------------------------
+   function onNextColorButton()
+   {
+      colorJourney.nextColor()
    }
 
    </script>
 
-   <div id='configDivId'>
-      <span>petals</span>
-      <br>
+   <div id='menuDivId'>
+         <img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/>
+         <img src='assets/flower_bloom.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/>
+      </div>
+
+   <div id='petalsConfigDivId' class='menu_transparent configDivClass'>
+      <button class='dismissButton' onclick='dismissConfigMenus()'>X</button>
+      <br><br>
       <div id='numPetalsRangeContainer' style='display:inline-block;'></div>
       <br>
       <button id='halveSpokesButtonId' onclick='onHalvePetalsButton()'>&lt;&lt;</button>
@@ -591,23 +648,33 @@
       <br>
       <div id='petalsOffsetRangeContainer' style='display:inline-block;'></div>
       <br>
-      <span>show :</span><input type='checkbox' id='showGuidesCheckboxId' checked='true' onchange="onChangeDrawGuides(event)">
+      <span class="highlightletter">g</span><span>uides :</span><input type='checkbox' id='showGuidesCheckboxId' checked='true' onchange="onChangeDrawGuides(event)">
       <br>
-      <span>half:</span><input type='checkbox' id='halfGuidesCheckboxId' checked='true' onchange="onChangeDrawHalfGuides(event)">
+      <span class="highlightletter">h</span><span>alf:</span><input type='checkbox' id='halfGuidesCheckboxId' checked='true' onchange="onChangeDrawHalfGuides(event)">
       <br>
-      <span>mirror:</span><input type='checkbox' id='mirrorGuidesCheckboxId', checked='false' onchange='onChangeMirrorGuides(event)'>
+      <span class="highlightletter">m</span><span>irror:</span><input type='checkbox' id='mirrorGuidesCheckboxId', checked='false' onchange='onChangeMirrorGuides(event)'>
       <br>
       <br>
       <select id='drawModeSelectId' onchange='onChangeDrawMode(event)'>
          <option value='freeform'>Freeform</option>
          <option value='lines'>Lines</option>
          <option value='circles'>Circles</opotion>
-         <!-- <option value='erase'>Erase</option> -->
       </select>
-      <br>
-      <button id='clearDrawingButtonId' onclick='onClearDrawingButton()'>Clear</button>
-      <br>
+      <br><br>
+      <button id='clearDrawingButtonId' onclick='onClearDrawingButton()'>Clear (<span class='highlightletter'>X</span>)</button>
       <button id='viewButtonId' onclick='onClickViewButton()'>View</button>
+   </div>
+
+   <div id='colorsConfigDivId' class='menu_transparent configDivClass'>
+      <span>color journey</span>
+      <button class='dismissButton' onclick='dismissConfigMenus()'>X</button>
+      <br><br>
+      <button id='playPauseColorJourneyButtonId' onclick='onPlayPauseColorJourneyButton()'>||</button>
+      <button id='nextColorButtonId' onclick='onNextColorButton()'>&gt;&gt;</button>
+      <br>
+      <span>speed</span>
+      <div id='colorJourneySpeedContainer' style='display:inline-block;'></div>
+      <br>
    </div>
 
    <div id="canvasContainerId">

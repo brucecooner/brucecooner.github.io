@@ -83,7 +83,6 @@ var DrawEngine =
       }
       onMouseMove = function(event)
       {
-         console.log('de mouse move')
          this.mouseCoords = getRelativeCoordinates(event, this.inputCanvas)
 
          this.cursorEngine.setTargetPoint(this.mouseCoords)
@@ -92,7 +91,6 @@ var DrawEngine =
       // -----------------------------------------------------------------------
       onMouseOut = function()
       {
-         console.log('de mouse out')
          this.mouseButtonDown = false
 
          if (this.currentDrawMode.hasOwnProperty('onMouseOut'))

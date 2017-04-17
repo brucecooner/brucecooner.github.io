@@ -1,7 +1,5 @@
 var DrawModeCircles =
 {
-   // TODO:
-   // -cancel/restart
    DrawModeCircles:function(drawEngine)
    {
       this.name = 'circles'
@@ -11,38 +9,24 @@ var DrawModeCircles =
 
       this.onCursorMove = function(event)
       {
-         if (null != this.circleCenter)
-         {
-            var delta = distanceBetweenPoints(this.circleCenter, this.drawEngine.cursorCoords)
-
-            if (delta > 2)
-            {
-               gComms = []
-               gComms.push( GraphicsCommands.setDrawParameter('strokeStyle', '#000000'))
-               gComms.push( GraphicsCommands.circle(this.circleCenter.x, this.circleCenter.y, delta))
-               this.drawEngine.drawCursorGraphics(gComms)
-            }
-         }
       }.bind(this)
 
       this.onMouseUp = function(event)
       {
          if (null == this.circleCenter)
          {
-            this.circleCenter = Object.assign({}, drawEngine.cursorCoords)
+            this.circleCenter = new fnc2d.Point(this.drawEngine.getCursorCoords())
          }
          else
          {
             if (this.drawEngine.isRightMouseButton)   // cancel current circle
             {
-               this.drawEngine.drawCursorGraphics([GraphicsCommands.clear()])
                this.circleCenter = null
             }
             else
             {
-               radius = distanceBetweenPoints(this.drawEngine.cursorCoords, this.circleCenter)
+               radius = this.drawEngine.getCursorCoords().delta(this.circleCenter).length()
                gComms = []
-               gComms.push( GraphicsCommands.setDrawParameter('strokeStyle', '#000000'))
                gComms.push( GraphicsCommands.setDrawParameter('fillStyle', null ))
                gComms.push( GraphicsCommands.circle(this.circleCenter.x, this.circleCenter.y, radius ) )
                this.drawEngine.drawOutputGraphics(gComms)
@@ -62,8 +46,25 @@ var DrawModeCircles =
       }
       this.End = function()
       {
-         // this.lineStart = null
-         // this.drawEngine.drawCursorGraphics([GraphicsCommands.clear()])
+      }
+
+      // -----------------------------------------------------------------------
+      this.getCursorGraphics = function()
+      {
+         gComms = []
+         if (null != this.circleCenter)
+         {
+            var delta = this.circleCenter.delta(this.drawEngine.getCursorCoords()).length()
+
+            if (delta > 2)
+            {
+               gComms = []
+               gComms.push( GraphicsCommands.setDrawParameter('strokeStyle', '#000000'))
+               gComms.push( GraphicsCommands.circle(this.circleCenter.x, this.circleCenter.y, delta))
+            }
+         }
+
+         return gComms
       }
 
    }

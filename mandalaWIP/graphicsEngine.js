@@ -16,6 +16,8 @@ var GraphicsEngine =
          'fillStyle':function(ctx, value){ctx.fillStyle = value },
          'strokeStyle':function(ctx, value){ctx.strokeStyle = value },
          'lineDash':function(ctx, value){ctx.setLineDash(value)},
+         'translate':function(ctx, value){ctx.translate(value.x,value.y)},
+         'rotate':function(ctx, value){ctx.rotate(value)}
       }
 
       // -----------------------------------------------------------------------
@@ -40,20 +42,26 @@ var GraphicsEngine =
       }
 
       // -----------------------------------------------------------------------
+      clearCanvasTransform = function( parameters )
+      {
+         this.context.setTransform(1,0,0,1,0,0)
+      }
+
+      // -----------------------------------------------------------------------
       drawLine = function( parameters )
       {
          this.context.beginPath()
-         this.context.moveTo( parameters.P1.x, parameters.P1.y )
-         this.context.lineTo( parameters.P2.x, parameters.P2.y )
+         this.context.moveTo( parameters.p1.x, parameters.p1.y )
+         this.context.lineTo( parameters.p2.x, parameters.p2.y )
          this.context.stroke()
       }
 
       // -----------------------------------------------------------------------
       drawCircle = function( parameters )
       {
-         // TODO : colors and stuff like that
+         // console.log(`ge:circle ${parameters.x},${parameters.y} r:${parameters.radius}`)
          this.context.beginPath();
-         this.context.arc(parameters.x, parameters.y, parameters.radius, 0, TWO_PI );
+         this.context.arc(parameters.x, parameters.y, parameters.radius, 0, Math.PI * 2 );
 
          this.context.lineWidth = 1;
 
@@ -63,21 +71,36 @@ var GraphicsEngine =
       this.commandHandlers = {
          [GraphicsCommands.cmd_clear]:clearCanvas.bind(this),
          [GraphicsCommands.cmd_setDrawParameter]:setDrawParameter.bind(this),
-         [GraphicsCommands.cmd_circle]:null,
          [GraphicsCommands.cmd_line]:drawLine.bind(this),
          [GraphicsCommands.cmd_circle]:drawCircle.bind(this),
       }
 
       // -----------------------------------------------------------------------
-      this.execute = function( commandsList )
+      this.execute = function( commands )
       {
-         var test = this.context
-
-         // man, this bind seems out of place...
-         commandsList.forEach( function(currentCommand)
+         if (Array.isArray(commands))
          {
-            this.commandHandlers[currentCommand.command](currentCommand.parameters)
-         }, this)
+            commands.forEach( function(currentCommand)
+            {
+               this.commandHandlers[currentCommand.command](currentCommand.parameters)
+            }, this)
+         }
+         else
+         {
+            this.commandHandlers[commands.command](commands.parameters)
+         }
+      }
+
+      // -----------------------------------------------------------------------
+      this.saveState = function()
+      {
+         this.context.save()
+      }
+
+      // -----------------------------------------------------------------------
+      this.restoreState = function()
+      {
+         this.context.restore()
       }
    }
 }

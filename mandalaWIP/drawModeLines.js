@@ -9,41 +9,24 @@ var DrawModeLines =
 
       this.onCursorMove = function(event)
       {
-         if (null != this.lineStart)
-         {
-            var xDiff = this.drawEngine.cursorCoords.x - this.lineStart.x
-            var yDiff = this.drawEngine.cursorCoords.y - this.lineStart.y
-            var delta = Math.sqrt((xDiff * xDiff) + (yDiff * yDiff))
-
-            if (delta > 3)
-            {
-               graphicsComms = []
-               graphicsComms.push( GraphicsCommands.line(this.lineStart, this.drawEngine.cursorCoords))
-               this.drawEngine.drawCursorGraphics(graphicsComms)
-            }
-         }
       }.bind(this)
 
       this.onMouseUp = function(event)
       {
          if (null == this.lineStart)
          {
-            this.lineStart = Object.assign({}, drawEngine.cursorCoords)
+            this.lineStart = drawEngine.getCursorCoords()
          }
          else
          {
             if (this.drawEngine.isRightMouseButton)   // cancel current line
             {
-               this.drawEngine.drawCursorGraphics([GraphicsCommands.clear()])
                this.lineStart = null
             }
             else
             {
-               gCommands = []
-               gCommands.push( GraphicsCommands.setDrawParameter('strokeStyle', '#000000'))
-               gCommands.push( GraphicsCommands.line(this.lineStart, this.drawEngine.cursorCoords))
-               this.drawEngine.drawOutputGraphics(gCommands)
-               Object.assign(this.lineStart, drawEngine.cursorCoords)
+               this.drawEngine.drawOutputGraphics([GraphicsCommands.line(new fnc2d.Point(this.lineStart), this.drawEngine.getCursorCoords())])
+               this.lineStart.set(drawEngine.getCursorCoords())
             }
          }
       }.bind(this)
@@ -64,9 +47,28 @@ var DrawModeLines =
       }
       this.End = function()
       {
-         // this.lineStart = null
-         // this.drawEngine.drawCursorGraphics([GraphicsCommands.clear()])
       }
+
+      // -----------------------------------------------------------------------
+      // returns : [ [graphicsCommand [, graphicsCommand]]]
+      this.getCursorGraphics = function()
+      {
+         graphicsComms = []
+         if (null != this.lineStart)
+         {
+            // TODO:use math library!
+            var xDiff = this.drawEngine.getCursorCoords().x - this.lineStart.x
+            var yDiff = this.drawEngine.getCursorCoords().y - this.lineStart.y
+            var delta = Math.sqrt((xDiff * xDiff) + (yDiff * yDiff))
+
+            if (this.lineStart.delta(this.drawEngine.getCursorCoords()).length() > 3)
+            {
+               graphicsComms.push( GraphicsCommands.line(this.lineStart, this.drawEngine.getCursorCoords()))
+            }
+         }
+
+         return graphicsComms
+      }.bind(this)
 
    }
 }

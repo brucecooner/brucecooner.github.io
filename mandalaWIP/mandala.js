@@ -1,3 +1,4 @@
+;'use strict'
 // Notes:
 // -assumes points are always in 'mandala' space (already relative to center)
 var Mandala =
@@ -25,29 +26,41 @@ var Mandala =
       this.lastRenderedGuides = null
 
       // -----------------------------------------------------------------------
+      // returns object that encapsulates current state
+      this.getState = function()
+      {
+         return { numPetals:this.numPetals,
+                  mirrorLine:this.mirrorLine }
+      }
+
+      // -----------------------------------------------------------------------
       this.setMirrorLine = function(line)
-      { this.mirrorLine = line }
+      {
+         console.log(`setting mirror line`)
+         this.mirrorLine = line
+      }
 
       // -----------------------------------------------------------------------
       // renders a series of lines to represent the spokes that form the guide
-      // returns : { guideLines:[{P1:{x,y}}, P2:{x,y}}],
-      //             halfGuideLines:[ { P1:{x,y}, P2:{x,y} } ]}
+      // returns : { guideLines:[{p1:{x,y}}, p2:{x,y}}],
+      //             halfGuideLines:[ { p1:{x,y}, p2:{x,y} } ]}
       this.RenderGuides = function(guideLength)
       {
-         const radiansPerSpoke = TWO_PI / this.numPetals
+         const radiansPerSpoke = (Math.PI * 2) / this.numPetals
          let currentRotation = 0.0
 
-         guideLines = []
-         halfGuideLines = []
+         let guideLines = []
+         let halfGuideLines = []
 
-         var offsetRotation = radiansPerSpoke * this.petalsOffset
+         let offsetRotation = radiansPerSpoke * this.petalsOffset
          currentRotation += offsetRotation
 
          for (var currentSpoke = 0; currentSpoke < this.numPetals; ++currentSpoke)
          {
-            rot_point = rotatePoint( 0.0, guideLength, currentRotation)
+            // rot_point = my2d.rotatePoint( 0.0, guideLength, currentRotation)
+            let rot_point = new fnc2d.Point(0, guideLength).rotate(currentRotation)
 
-            guideLines.push( {P1:{x:0, y:0}, P2:{x:rot_point.x, y:rot_point.y}})
+            guideLines.push( new fnc2d.Line( [0,0], [Math.floor(rot_point.x),Math.floor(rot_point.y)]))
 
             currentRotation += radiansPerSpoke
          }
@@ -58,9 +71,10 @@ var Mandala =
 
             for (var currentSpoke = 0; currentSpoke < this.numPetals; ++currentSpoke)
             {
-               rot_point = rotatePoint( 0.0, guideLength, currentRotation)
+               // rot_point = my2d.rotatePoint( 0.0, guideLength, currentRotation)
+               let rot_point = new fnc2d.Point(0, guideLength).rotate(currentRotation)
 
-               halfGuideLines.push( {P1:{x:0, y:0}, P2:{x:rot_point.x, y:rot_point.y}})
+               halfGuideLines.push( new fnc2d.Line( [0,0], [Math.floor(rot_point.x),Math.floor(rot_point.y)]))
 
                currentRotation += radiansPerSpoke
             }
@@ -78,23 +92,24 @@ var Mandala =
       // to point and then math-ing the line (don't forget offsets though)
       this.NearestGuideLine = function(point)
       {
-         gLines = []
+         let gLines = []
+         let closestDistanceSoFar = Number.MAX_VALUE;
+         let closestLine = null
+
          if ( null != this.lastRenderedGuides )
          {
             gLines = this.lastRenderedGuides.guideLines
          }
          else
          {
-            lines = this.RenderGuides(10)
+            let lines = this.RenderGuides(10)
             gLines = lines.guideLines
          }
 
-         closestDistanceSoFar = Number.MAX_VALUE;
-         closestLine = null
-
          gLines.forEach( function(currentLine)
          {
-            currentDistance = distancePointToLine(point, currentLine)
+            // currentDistance = my2d.distancePointToLine(point, currentLine)
+            let currentDistance = currentLine.perpDistance(point)
 
             if (currentDistance < closestDistanceSoFar)
             {
@@ -113,58 +128,177 @@ var Mandala =
       // returns: [ {x,y}, ... ]
       this.ReflectPoints = function(point)
       {
-         points = []
-
-         const radiansPerSpoke = TWO_PI / this.numPetals
+         const radiansPerSpoke = (Math.PI * 2) / this.numPetals
+         let points = []
          let currentRotation = 0.0
+         let reflectedPoint = null
 
-         reflectedPoint = null
          if ( this.mirrorLine )
          {
-            reflectedPoint = reflectPoint(point, this.mirrorLine)
+            // reflectedPoint = my2d.reflectPoint(point, this.mirrorLine)
+            reflectedPoint = point.reflect(this.mirrorLine)
          }
 
          for (var currentSpoke = 0; currentSpoke < this.numPetals; ++currentSpoke)
          {
-            rot_point = rotatePoint( point.x, point.y, currentRotation)
+            // rot_point = my2d.rotatePoint( point.x, point.y, currentRotation)
+            let rot_point = point.rotate(currentRotation)
 
             points.push(rot_point)
 
             if ( null != reflectedPoint )
             {
-               points.push(rotatePoint(reflectedPoint.x, reflectedPoint.y, currentRotation))
+               // points.push(my2d.rotatePoint(reflectedPoint.x, reflectedPoint.y, currentRotation))
+               points.push(reflectedPoint.rotate(currentRotation))
             }
 
             currentRotation += radiansPerSpoke
          }
 
          return points
-      }  // end ReflectPoints()
+      } // end ReflectPoints()
 
       // -----------------------------------------------------------------------
-      // receives: parameters:{P1:{x,y}, P2:{x,y} }
+      // receives: line
       // notes: assumes line is in mandala space
       // reflects line around center of mandala, once for each petal
-      // returns: [ { P1:{x,y}, P2:{x,y} } ]
-      this.RenderLine = function(parameters)
+      // returns: [ fnc2d.Line ]
+      this.RenderLine = function(line)
       {
-         const radiansPerSpoke = TWO_PI / this.numPetals
+         const radiansPerSpoke = (Math.PI * 2) / this.numPetals
          let currentRotation = 0.0
+         let lines = []
 
-         lines = []
+         let startPoints = this.ReflectPoints(line.p1)
+         let endPoints = this.ReflectPoints(line.p2)
 
-         startPoints = this.ReflectPoints(parameters.P1)
-         endPoints = this.ReflectPoints(parameters.P2)
-
-         var currentPointIndex = 0
+         let currentPointIndex = 0
          for ( currentPointIndex = 0; currentPointIndex < startPoints.length; currentPointIndex++ )
          {
-            lines.push( { P1:startPoints[currentPointIndex],
-                           P2:endPoints[currentPointIndex]})
+            lines.push( new fnc2d.Line( startPoints[currentPointIndex],
+                                          endPoints[currentPointIndex]))
          }
 
          return lines
       }  // end RenderLine()
+
+      // -----------------------------------------------------------------------
+      this.dispatchDrawParameters = function(drawParameters, graphicsEngine)
+      {
+         if (null !== drawParameters)
+         {
+            let commands = []
+            for (var param in drawParameters)
+            {
+               if (drawParameters.hasOwnProperty(param))
+               {
+                  commands = commands.concat(GraphicsCommands.setDrawParameter(param, drawParameters[param]))
+               }
+            }
+            if (commands.length > 0)
+            {
+               graphicsEngine.execute(commands)
+            }
+         }
+      }
+
+      // -----------------------------------------------------------------------
+      // receives:   origin:{x,y}
+      //             graphicsEngine:GraphicsEngine
+      this.setOrigin = function(origin, graphicsEngine)
+      {
+         let command = GraphicsCommands.setDrawParameter('translate', origin)
+         graphicsEngine.execute(command)
+      }
+
+      // -----------------------------------------------------------------------
+      this.mirrorLineCommand = function(command, mirrorLine)
+      {
+         let p1Mirrored = new fnc2d.Point(command.parameters.p1).reflect(mirrorLine).floorEq()
+         let p2Mirrored = new fnc2d.Point(command.parameters.p2).reflect(mirrorLine).floorEq()
+
+         return GraphicsCommands.line(p1Mirrored, p2Mirrored)
+      }
+
+      // -----------------------------------------------------------------------
+      this.mirrorCircleCommand = function(command, mirrorLine)
+      {
+         let centerMirrored = new fnc2d.Point(command.parameters.x,command.parameters.y).reflect(mirrorLine).floorEq()
+
+         return GraphicsCommands.circle(centerMirrored.x, centerMirrored.y, command.parameters.radius)
+      }
+
+      this.mirrorHandlers =
+      {
+         'line':this.mirrorLineCommand,
+         'circle':this.mirrorCircleCommand,
+      }
+
+      // -----------------------------------------------------------------------
+      this.mirrorCommands = function(commands, mirrorLine)
+      {
+         let newCommands = []
+
+         if (Array.isArray(commands))
+         {
+            commands.forEach( function(command)
+            {
+               newCommands.push(command)
+               if (this.mirrorHandlers.hasOwnProperty(command.command))
+               {
+                  newCommands.push(this.mirrorHandlers[command.command](command, mirrorLine))
+               }
+            }, this)
+         }
+         else
+         {
+            newCommands.push(command)
+            if (this.mirrorHandlers.hasOwnProperty(commands.command))
+            {
+               newCommands.push(this.mirrorHandlers[commands.command](commands, mirrorLine))
+            }
+         }
+
+         return newCommands
+      }
+
+      // -----------------------------------------------------------------------
+      // receives: renderObject:{   commands:[],
+      //                            mandalaState:{},
+      //                            drawParameters:{},
+      //                            origin:{x,y}}
+      // graphicsEngine: GraphicsEngine
+      this.render = function(renderObject, graphicsEngine)
+      {
+         let rotationPerPetal = Math.PI * 2 / renderObject.mandalaState.numPetals
+         let rotCommand = GraphicsCommands.setDrawParameter('rotate', rotationPerPetal)
+
+         // if (null !== renderObject.mirrorLine)
+         // {
+         //    let mirroredCommands = this.mirrorCommands(renderObject.commands, renderObject.mandalaState.mirrorLine)
+         //    renderObject.commands = mirroredCommands
+         // }
+
+         graphicsEngine.saveState()
+
+         this.dispatchDrawParameters(renderObject.drawParameters, graphicsEngine)
+
+         if (renderObject.clear)
+         {
+            graphicsEngine.execute(GraphicsCommands.clear())
+         }
+
+         this.setOrigin(renderObject.origin, graphicsEngine)
+
+         let i = 0
+         for (i = 0; i < renderObject.mandalaState.numPetals; i += 1)
+         {
+            graphicsEngine.execute(renderObject.commands)
+            graphicsEngine.execute(rotCommand)
+         }
+
+         graphicsEngine.restoreState()
+      }
 
    },
 

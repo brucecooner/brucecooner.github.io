@@ -8,13 +8,14 @@ var GraphicsCommands =
    // state commands
    cmd_setLineDash:'setLineDash',   // TODO : make a draw param
    cmd_setDrawParameter:'setDrawParameter',
+   cmd_clear_transform:'clearTransform',
 
    // functions that return graphics command objects
    clear:function()
    { return {command:'clear'}},
 
    line:function(lineStart, lineEnd)
-   { return { command:'line', parameters:{P1:lineStart, P2:lineEnd} } },
+   { return { command:'line', parameters:{p1:lineStart, p2:lineEnd} } },
 
    circle:function(x, y, radius)
    { return { command:'circle', parameters:{x, y, radius} } },
@@ -23,5 +24,8 @@ var GraphicsCommands =
    { return { command:'setLineDash', parameters:{dashSequence}}},
 
    setDrawParameter:function(parameterName, value)
-   { return { command:'setDrawParameter', parameters:{parameterName, value} }}
+   { return { command:'setDrawParameter', parameters:{parameterName, value} }},
+
+   clearTransform:function()
+   { return {command:'clearTransform'}},
 }

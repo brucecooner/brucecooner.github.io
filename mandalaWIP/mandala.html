@@ -10,11 +10,11 @@
     <!-- TODO: can we push the dependencies into their dependent modules?  -->
     <link rel="stylesheet" type="text/css" href="mandalaStyles.css">
     <script src="libs/jquery-3.1.1.min.js"></script>
-    <script src="libs/maths.js"></script>
     <script src="libs/utility.js"></script>
     <script src="libs/myRangeInput.js"></script>
     <script src="libs/WatchedValue.js"></script>
     <script src="libs/debugDiv.js"></script>
+    <script src="libs/fnc2d.js"></script>
 
     <script src="graphicsCommands.js"></script>
     <script src="graphicsEngine.js"></script>
@@ -33,39 +33,42 @@
 
    <!--
    TODO:
+   BUGS:
+      -cursor graphic strokes get too big
+      -stupid composite thing with undo buffer, boo
+      -freeform should allow single pixels
+      -jerkiness in continuous draw mode? seems okay, for now
+      -eraser doesn't work unless moving, can't click-erase
+      -eraser needs to perform true transparency on canvas
+      -seeing two mirror lines in renderObjects (maybe rename these strokes?)
    -FEATURES:
+      -center marker when petals == 2
+      -snap to...things
+      -how about a REdo?
+      -confirm dialog on clear, or maybe undoing clears
       -color selection?
       -line width selection
       -draw mode specific config? (line width, eraser size, etc.)
       -guide opacity?
       -guide distance markers
-      -undo
       -help!
-      -shortcut keys!
       -unobtrusive way to see num petals
       -configurable color journey
       -line choices (size, shape, helix?, etc.)
    -TECH:
-      -detect when graphics execute does/does not get an array!
+      -better way to view than giant base-64 string?
+      -paths instead of lines? Or maybe variable point lines?
+      -have continuous draw use paths
+      -mandala can recreate from parameters
+      -officially migrate to K&R brackets (grumble)
+      -better way to trigger renders (pub/sub maybe?)
       -should the canvas just fill the damn window?
-      -break out rendering ?
-      -render reflected objects with workers?
-      -smoother freeform lines
-      -detect/handle cursor leaving canvas with button down
-      -hide cursor points when cursor not on draw canvas
-      -store local origin/transform in graphicsEngine, work completely in mandala space
+      -render command arrays with workers?
+      -smoother freeform lines (ugh)
       -get handle on naming functions in mandala, general functionality
-      -cleaner logic around the mirror stuff
+      -clean up logic/functionality around the mirror stuff!
       -use library for event listening attach
    -LAYOUT:
-      -show/hide config?
-      -prettify config
-   BUGS:
-   -freeform should allow single pixels
-   -eraser doesn't work unless moving, can't click-erase
-   -jerkiness in continuous draw mode? seems okay, for now
-   -redraw cursor points when line is cancelled
-   -eraser needs to perform true transparency on canvas
    -->
 
    <script>
@@ -75,9 +78,12 @@
    const drawingCanvasId = 'drawingCanvasId'
    const guidesCanvasId = 'guidesCanvasId'
    const cursorCanvasId = 'cursorCanvasId'
+   // can hold some number of strokes so they can be undone before 'committing'
+   // to the drawing canvas
+   const strokeBufferCanvasId = 'strokeBufferCanvasId'
 
    // order in which canvases are created
-   const canvasOrder = [ drawingCanvasId, guidesCanvasId, cursorCanvasId ]
+   const canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, cursorCanvasId ]
 
    // ==========================================================================
    const delayBeforeColorJourneyStart = 55
@@ -108,9 +114,9 @@
    // --------------------------------------------------------------------------
    function showConfigMenu(menuDivId)
    {
-      console.log(`showMenu : ${menuDivId}`)
+      // console.log(`showMenu : ${menuDivId}`)
       var numDivs = $('.configDivClass').length
-      console.log(`num divs: ${numDivs}`)
+      // console.log(`num divs: ${numDivs}`)
 
       $('.configDivClass').each( function()
       {
@@ -158,6 +164,25 @@
 
    }
 
+   // ==========================================================================
+   // buffer stuff
+   // becomes an array of drawStroke's
+   var strokeBuffer = []
+   const strokeBufferSize = 5
+
+   // --------------------------------------------------------------------------
+   function undo()
+   {
+      if (strokeBuffer.length > 0)
+      {
+         strokeBuffer.splice( strokeBuffer.length - 1, 1)
+      }
+
+      renderStrokeBuffer(strokeBufferGraphicsEngine, true)
+
+      debugDiv.add('strokeBuffer', `buffer len:${strokeBuffer.length}`)
+   }
+
    // --------------------------------------------------------------------------
    // TODO: ugh, more dynamic canvas fetch!
    function getDrawCanvas()
@@ -174,17 +199,21 @@
       // currently topmost one
       return document.getElementById(guidesCanvasId)
    }
+   function getStrokeBufferCanvas()
+   {
+      return document.getElementById(strokeBufferCanvasId)
+   }
 
    // ----------------------------------------------------------
    // drawing
    // ---------------------------------------------------------
    function toCanvasSpace(point)
    {
-      return { x:point.x + (canvasSize / 2), y:point.y + (canvasSize /2) }
+      return new fnc2d.Point(point).translate(canvasSize / 2)
    }
    function toMandalaSpace(point)
    {
-      return { x:point.x - (canvasSize / 2), y:point.y - (canvasSize /2) }
+      return new fnc2d.Point(point).translate(-1 * (canvasSize / 2))
    }
 
    // ---------------------------------------------------------
@@ -199,8 +228,8 @@
 
          linesCommands = lines.guideLines.map( function(lineParams)
          {
-            return GraphicsCommands.line( toCanvasSpace(lineParams.P1),
-                                          toCanvasSpace(lineParams.P2) )
+            return GraphicsCommands.line( toCanvasSpace(lineParams.p1),
+                                          toCanvasSpace(lineParams.p2) )
          })
 
          commands = commands.concat( linesCommands )
@@ -209,8 +238,8 @@
          {
             linesCommands = lines.halfGuideLines.map( function(lineParams)
             {
-               return GraphicsCommands.line( toCanvasSpace(lineParams.P1),
-                                             toCanvasSpace(lineParams.P2) )
+               return GraphicsCommands.line( toCanvasSpace(lineParams.p1),
+                                             toCanvasSpace(lineParams.p2) )
             })
 
             commands = commands.concat([ GraphicsCommands.setDrawParameter('lineDash', [5,3])] )
@@ -220,94 +249,101 @@
       guidesGraphicsEngine.execute(commands)
    }
 
-   // ---------------------------------------------------------
-   function render()
+   // --------------------------------------------------------------------------
+   // clears EVERYTHING
+   function eraseAll()
    {
-      renderGuides()
+      outputGraphicsEngine.execute(GraphicsCommands.clear())
+      strokeBufferGraphicsEngine.execute( GraphicsCommands.clear())
+      strokeBuffer = []
    }
 
    // --------------------------------------------------------------------------
-   // these functions take a GraphicsCommand from the DrawEngine and turn them
-   // into a set of commands relevant to the mandala (i.e. reflected around
-   // the center, etc.)
-   // TODO: there should be a general form of this we could employ in the mandala
-   // itself
-   function transformLineCommand(lineCommand)
+   // consolidates information needed to render a draw stroke in the mandala object
+   function buildMandalaStroke(graphicsCommands, drawParameters, clearCanvas)
    {
-      parameters = lineCommand.parameters
-
-      lines = mandala.RenderLine( { P1:toMandalaSpace(parameters.P1),
-                                    P2:toMandalaSpace(parameters.P2)} )
-
-      newCommands = []
-
-      lines.forEach( function(currentLine)
+      if (null === drawParameters)
       {
-         newCommands.push( GraphicsCommands.line(  toCanvasSpace(currentLine.P1),
-                                                   toCanvasSpace(currentLine.P2) ) )
-      })
+         drawParameters = {}
+      }
 
-      return newCommands
-   }
-
-   // --------------------------------------------------------------------------
-   function transformCircleCommand(circleCommand)
-   {
-      parameters = circleCommand.parameters
-
-      circlePoints = mandala.ReflectPoints( toMandalaSpace( {x:parameters.x, y:parameters.y} ) )
-
-      newCommands = circlePoints.map( function(currentPoint)
+      // if color not specified, add it here
+      // if user color selection is added, it'd go here I guess
+      if (!drawParameters.hasOwnProperty('strokeStyle'))
       {
-         canvasSpacePoint = toCanvasSpace( currentPoint )
-         return GraphicsCommands.circle(canvasSpacePoint.x, canvasSpacePoint.y, parameters.radius)
-      })
+         drawParameters.strokeStyle = '#000000'
+      }
 
-      return newCommands
+      // note that mandala has no knowledge of element/canvas sizes
+      let canvasOrigin = new fnc2d.Point( canvasSize/2, canvasSize/2)
+
+      let mandalaState = mandala.getState()
+
+      if (null !== mandalaState.mirrorLine)
+      {
+         let mirroredCommands = mandala.mirrorCommands(graphicsCommands, mandalaState.mirrorLine)
+         graphicsCommands = mirroredCommands
+      }
+
+      return { commands:graphicsCommands,
+               mandalaState:mandalaState,
+               drawParameters: drawParameters,
+               origin:canvasOrigin,
+               clear:clearCanvas}
    }
 
    // --------------------------------------------------------------------------
-   var transformHandlers =
+   function renderStrokeBuffer(graphicsEngine, clearBefore)
    {
-      [GraphicsCommands.cmd_line]:transformLineCommand,
-      [GraphicsCommands.cmd_circle]:transformCircleCommand,
+      if (clearBefore)
+      {
+         strokeBufferGraphicsEngine.execute(GraphicsCommands.clear())
+      }
+
+      strokeBuffer.forEach( function(currentStroke)
+      {
+         mandala.render(currentStroke, graphicsEngine, false)
+      })
    }
 
    // --------------------------------------------------------------------------
    // graphicsCommands : [ {graphic command}, ... ]
    function drawOutput(graphicsCommands)
    {
-      graphicsCommands.forEach( function(currentCommand)
+      let newStroke = buildMandalaStroke(graphicsCommands, {strokeStyle:'#000000'}, false)
+
+      // need to commit buffered render to draw canvas?
+      if (strokeBuffer.length >= strokeBufferSize)
       {
-         if ( transformHandlers.hasOwnProperty(currentCommand.command))
-         {
-            transformedCommands = transformHandlers[currentCommand.command](currentCommand)
-            outputGraphicsEngine.execute(transformedCommands)
-         }
-         else
-         {
-            outputGraphicsEngine.execute([currentCommand])
-         }
-      })
+         // if strokes are ejected FROM buffer, redraw it fully so there's no overdraw
+         // with the draw canvas
+         commitStroke = strokeBuffer.splice(0, 1)[0]
+         mandala.render(commitStroke, outputGraphicsEngine)
+
+         strokeBuffer.push(newStroke)
+         renderStrokeBuffer(strokeBufferGraphicsEngine, true)
+      }
+      else
+      {
+         strokeBuffer.push(newStroke)
+         // note : does not call for redraw, nothing was ejected from drawBuffer
+         mandala.render(newStroke, strokeBufferGraphicsEngine, false)
+      }
+
+      debugDiv.add('strokeBuffer', `buffer len:${strokeBuffer.length}`)
    }
 
    // --------------------------------------------------------------------------
-   // graphicsCommands : [ {graphic command}, ... ]
+   // handles mandala/reflection concerns
+   // receives:graphicsCommands : [ {graphic command}, ... ]
    function drawCursorOutput(graphicsCommands)
    {
-      graphicsCommands.forEach( function(currentCommand)
-      {
-         // test for transformation
-         if ( transformHandlers.hasOwnProperty(currentCommand.command))
-         {
-            transformedCommands = transformHandlers[currentCommand.command](currentCommand)
-            cursorGraphicsEngine.execute(transformedCommands)
-         }
-         else
-         {
-            cursorGraphicsEngine.execute([currentCommand])
-         }
-      })
+      let renderObject = buildMandalaStroke(graphicsCommands, {strokeStyle:'#000000'}, true)
+
+      // TODO : save object or something?
+
+      // dispatch it to the mandala
+      mandala.render(renderObject, cursorGraphicsEngine)
    }
 
    // --------------------------------------------------------------------------
@@ -315,14 +351,24 @@
    // receives: point{x,y} (in canvas space)
    function onCursorMove(point)
    {
-      if ( mandala.mirrorGuides )
+      debugDiv.add('cursormove', `(main)cursor:${point.str()}`)
+      if (mandala.mirrorGuides )
       {
-         point = toMandalaSpace(point)
-         // select closest guide line
          mirrorLine = mandala.NearestGuideLine(point)
 
          mandala.setMirrorLine( mirrorLine )
+         debugDiv.add('mirrorLine1', `m. line p1:${mirrorLine.p1.x},${mirrorLine.p1.y}`)
+         debugDiv.add('mirrorLine2', `m. line p2:${mirrorLine.p2.x},${mirrorLine.p2.y}`)
       }
+
+      renderCursorGraphics()
+   }
+
+   // --------------------------------------------------------------------------
+   function renderCursorGraphics()
+   {
+      cursorGraphics = drawEngine.getCursorGraphics()
+      drawCursorOutput(cursorGraphics)
    }
 
    // --------------------------------------------------------------------------
@@ -330,12 +376,14 @@
    var cursorGraphicsEngine = null
    var outputGraphicsEngine = null
    var guidesGraphicsEngine = null
+   var strokeBufferGraphicsEngine = null
 
    function initGraphicsEngines()
    {
       cursorGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:getInputCanvas()})
       outputGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:getDrawCanvas()})
       guidesGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:getGuidesCanvas()})
+      strokeBufferGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:getStrokeBufferCanvas()})
    }
 
    // --------------------------------------------------------------------------
@@ -360,8 +408,21 @@
       if ( false == mandala.mirrorGuides )
       {
          mandala.mirrorLine = null
+
+         debugDiv.remove('mirrorLine1')
+         debugDiv.remove('mirrorLine2')
       }
+      else
+      {
+         point = toMandalaSpace(drawEngine.cursorCoords)
+         // select closest guide line
+         mirrorLine = mandala.NearestGuideLine(point)
+         mandala.setMirrorLine( mirrorLine )
+      }
+
       $('#mirrorGuidesCheckboxId')[0].checked = mandala.mirrorGuides
+
+      renderCursorGraphics()
    }
 
    // --------------------------------------------------------------------------
@@ -393,7 +454,7 @@
       {
          case 'x':
          case 'X':
-            outputGraphicsEngine.execute( [GraphicsCommands.clear()] )
+            eraseAll()
          break;
          case '<':
          case ',':
@@ -414,6 +475,10 @@
          case 'g':
          case 'G':
             toggleShowGuides()
+         break;
+         case 'u':
+         case 'U':
+            undo()
          break;
       }
    }
@@ -476,10 +541,12 @@
       // --- graphics setup ---
       initGraphicsEngines()
 
+      let drawEngineTranslation = new fnc2d.Point( -canvasSize / 2, -canvasSize /2)
       drawEngine = new DrawEngine.DrawEngine({ inputCanvas:getInputCanvas(),
-                                                drawCursorGraphics:drawCursorOutput, // cursorGraphicsEngine.execute.bind(cursorGraphicsEngine),
+                                                renderCursorGraphics:renderCursorGraphics,
                                                 drawOutputGraphics:drawOutput,
-                                                cursorMoveCallback:onCursorMove})
+                                                cursorMoveCallback:onCursorMove,
+                                                coordsTranslation:drawEngineTranslation})
 
       // --- UI INIT ---
       // TODO: better way to do this?
@@ -490,14 +557,14 @@
       $('#mirrorGuidesCheckboxId')[0].checked = mandala.mirrorGuides
 
       // DRAW
-      render()
+      renderGuides()
 
       // color journey stuff
       let colorJourneySpeedCallback = myRangeInput.createRange({id:'colorJourneySpeedId',
             containerId:'colorJourneySpeedContainer',
             onInputHandler:setColorJourneySpeed,
             initialValue:defaultColorJourneyScale,
-            min:0, max:1, step:0.1})
+            min:0, max:1, step:0.01})
 
       colorJourney = new ColorJourney.ColorJourney({node:document.getElementsByTagName('body')[0],
                                        departureTime:delayBeforeColorJourneyStart,
@@ -510,7 +577,7 @@
    // ---------------------------------------------------------
    function onClearDrawingButton()
    {
-      outputGraphicsEngine.execute( [GraphicsCommands.clear()] )
+      eraseAll()
    }
 
    // ---------------------------------------------------------
@@ -580,25 +647,30 @@
    }
 
    // --------------------------------------------------------------------------
-   // copies specified canvas, (which is assumed to have no background), fills
-   // background of new canvas (white), and opens in new window
-   function viewCanvas(fromCanvas)
+   // renders to new canvas, opens in new window as data uri
+   // TODO : find better way to do this than giant string
+   function viewMandala()
    {
-      var oldCtx = fromCanvas.getContext("2d")
+      let drawCanvas = getDrawCanvas()
+
+      var oldCtx = drawCanvas.getContext("2d")
 
       var newCanvas = document.createElement("canvas")
       var newCtx = newCanvas.getContext("2d")
 
       newCanvas.id = 'Mandala'
-      newCanvas.width = fromCanvas.width
-      newCanvas.height = fromCanvas.height
+      newCanvas.width = drawCanvas.width
+      newCanvas.height = drawCanvas.height
 
+      var oldCtx = drawCanvas.getContext("2d")
       data = oldCtx.getImageData(0, 0, newCanvas.width, newCanvas.height)
-
       newCtx.putImageData( data, 0, 0 )
 
-      // var compositeOperation = oldCtx.globalCompositeOperation
+      // don't forget the draw buffer...
+      let tempGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:newCanvas})
+      renderStrokeBuffer(tempGraphicsEngine, false)
 
+      // var compositeOperation = oldCtx.globalCompositeOperation
       newCtx.globalCompositeOperation = 'destination-over'
       newCtx.fillStyle = '#FFFFFF'
       newCtx.fillRect(0,0, newCanvas.width, newCanvas.height)
@@ -611,8 +683,15 @@
    // --------------------------------------------------------------------------
    function onClickViewButton()
    {
-      canvasEl = document.getElementById(drawingCanvasId)
-      viewCanvas(canvasEl)
+      // canvasEl = document.getElementById(drawingCanvasId)
+      // this is dumb, for some reason undo and draw buffers don't composite correctly
+      viewMandala()
+   }
+
+   // --------------------------------------------------------------------------
+   function onClickUndoButton()
+   {
+      undo()
    }
 
    // --------------------------------------------------------------------------
@@ -620,7 +699,7 @@
    {
       playState = colorJourney.togglePlaying()
 
-      $('#playPauseColorJourneyButtonId')[0].innerHTML = playState ? '||' : '>'
+      $('#playPauseColorJourneyButtonId')[0].innerHTML = playState ? '||' : ' >'
    }
 
    // --------------------------------------------------------------------------
@@ -631,20 +710,20 @@
 
    </script>
 
-   <div id='menuDivId'>
-         <img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/>
-         <img src='assets/flower_bloom.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/>
-      </div>
+   <ul id="mainMenuId">
+      <li><img src='assets/flower.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/></li>
+      <li><img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/></li>
+   </ul>
 
    <div id='petalsConfigDivId' class='menu_transparent configDivClass'>
-      <button class='dismissButton' onclick='dismissConfigMenus()'>X</button>
+      <button class='dismissButton flatButton' onclick='dismissConfigMenus()'>X</button>
       <br><br>
       <div id='numPetalsRangeContainer' style='display:inline-block;'></div>
       <br>
-      <button id='halveSpokesButtonId' onclick='onHalvePetalsButton()'>&lt;&lt;</button>
-      <button id='PlusOneSpokeButtonId' onclick='onMinusOneSpokeButton()'>-</button>
-      <button id='PlusOneSpokeButtonId' onclick='onPlusOneSpokeButton()'>+</button>
-      <button id='doubleSpokesButtonId' onclick='onDoublePetalsButton()'>&gt;&gt;</button>
+      <button id='halveSpokesButtonId' class='flatButton' onclick='onHalvePetalsButton()'>&lt;&lt;</button>
+      <button id='PlusOneSpokeButtonId' class='flatButton' onclick='onMinusOneSpokeButton()'>-</button>
+      <button id='PlusOneSpokeButtonId' class='flatButton' onclick='onPlusOneSpokeButton()'>+</button>
+      <button id='doubleSpokesButtonId' class='flatButton' onclick='onDoublePetalsButton()'>&gt;&gt;</button>
       <br>
       <div id='petalsOffsetRangeContainer' style='display:inline-block;'></div>
       <br>
@@ -654,23 +733,26 @@
       <br>
       <span class="highlightletter">m</span><span>irror:</span><input type='checkbox' id='mirrorGuidesCheckboxId', checked='false' onchange='onChangeMirrorGuides(event)'>
       <br>
-      <br>
+      <hr>
       <select id='drawModeSelectId' onchange='onChangeDrawMode(event)'>
-         <option value='freeform'>Freeform</option>
-         <option value='lines'>Lines</option>
-         <option value='circles'>Circles</opotion>
+         <option value='freeform'>freeform</option>
+         <option value='lines'>lines</option>
+         <option value='circles'>circles</opotion>
       </select>
       <br><br>
-      <button id='clearDrawingButtonId' onclick='onClearDrawingButton()'>Clear (<span class='highlightletter'>X</span>)</button>
-      <button id='viewButtonId' onclick='onClickViewButton()'>View</button>
+      <button id='undoButtonId' class='flatButton' onclick='onClickUndoButton()'><span class='highlightletter'>u</span>ndo</button>
+      <button id='viewButtonId' class='flatButton' onclick='onClickViewButton()'>view</button>
+      <button id='clearDrawingButtonId' class='flatButton' onclick='onClearDrawingButton()'>clear (<span class='highlightletter'>X</span>)</button>
    </div>
 
    <div id='colorsConfigDivId' class='menu_transparent configDivClass'>
       <span>color journey</span>
-      <button class='dismissButton' onclick='dismissConfigMenus()'>X</button>
+      <button class='dismissButton flatButton' onclick='dismissConfigMenus()'>X</button>
       <br><br>
-      <button id='playPauseColorJourneyButtonId' onclick='onPlayPauseColorJourneyButton()'>||</button>
-      <button id='nextColorButtonId' onclick='onNextColorButton()'>&gt;&gt;</button>
+      <button id='playPauseColorJourneyButtonId' class='flatButton' onclick='onPlayPauseColorJourneyButton()'>||</button>
+      <button id='nextColorButtonId' class='flatButton' onclick='onNextColorButton()'>&gt;&gt;</button>
+      <br>
+      <!-- <img src='assets/hslhuecircle.png'/> -->
       <br>
       <span>speed</span>
       <div id='colorJourneySpeedContainer' style='display:inline-block;'></div>

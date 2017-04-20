@@ -35,14 +35,9 @@
    TODO:
    BUGS:
       -'jitter' induced by changing mirror line
-      -stupid composite thing with undo buffer, boo
-         -'fixed' by re-rendering stroke/undo buffer, but still would like to know
-          how to make it work
-      -freeform should allow single pixels
       -eraser doesn't work unless moving, can't click-erase
       -eraser needs to perform true transparency on canvas
    -FEATURES:
-      -center marker when petals == 2
       -snap to...things
       -how about a REdo?
       -confirm dialog on clear, or maybe undoing clears
@@ -51,7 +46,6 @@
       -draw mode specific config? (line width, eraser size, etc.)
       -guide opacity?
       -guide distance markers
-      -help!
       -configurable color journey
       -line choices (size, shape, helix?, etc.)
    -TECH:
@@ -72,6 +66,21 @@
    <script>
    // consts
    const canvasSize = 800
+
+   const drawModeNames = ['freeform', 'lines', 'circles']
+
+   const notesLines = [
+      'space : toggle draw mode',
+      'u : undo',
+      'x : clear',
+      'm : mirror around guides',
+      'g : show/hide petal guides',
+      'h : show/hide half guides',
+      'v : view (opens new winow)',
+      '< >: halve/double guides',
+      'left mouse: draw',
+      'right mouse: cancel (some modes)',
+   ]
 
    const drawingCanvasId = 'drawingCanvasId'
    const guidesCanvasId = 'guidesCanvasId'
@@ -391,6 +400,22 @@
       numPetalsTimeoutFunc = setTimeout(function(){ $('#numPetalsSpanId.shown').removeClass('shown').addClass('transparent') }, 1000);
    }
 
+   var drawModeSpanTimeoutFunc = 0
+   function showDrawMode(drawMode)
+   {
+      $('#drawModeSpanId').text(drawMode)
+
+      $('#drawModeMenuImgId')[0].src = `assets/${drawMode}.png`
+
+      // $('#numPetalsSpanId').html(num)
+      $('#drawModeSpanId').addClass('shown')
+      if (numPetalsTimeoutFunc != 0)
+      {
+         clearTimeout(numPetalsTimeoutFunc);
+      }
+      numPetalsTimeoutFunc = setTimeout(function(){ $('#drawModeSpanId.shown').removeClass('shown').addClass('transparent') }, 500);
+   }
+
    // --------------------------------------------------------------------------
    function toggleMirroring()
    {
@@ -443,6 +468,18 @@
    {
       switch (event.originalEvent.key)
       {
+         case ' ':
+            let i = 0
+            for (i = 0; i < drawModeNames.length; i += 1)
+            {
+               if (drawEngine.currentDrawMode.name === drawModeNames[i])
+               {
+                  let nextModeIndex = (i + 1) % drawModeNames.length
+                  onChangeDrawMode(drawModeNames[nextModeIndex])
+                  break
+               }
+            }
+         break;
          case 'x':
          case 'X':
             eraseAll()
@@ -474,6 +511,9 @@
          case 'v':
          case 'V':
             viewMandala()
+         break;
+         case "Escape":
+            dismissConfigMenus()
          break;
       }
    }
@@ -544,6 +584,11 @@
                                                 coordsTranslation:drawEngineTranslation})
 
       // --- UI INIT ---
+      notesLines.forEach( function(currentLine) {
+         $newSpan = $(`<span>${currentLine}</span><br>`).toggleClass('notesSpan')
+         $('#notesConfigDivId').append($newSpan)
+      })
+
       // TODO: better way to do this?
       $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
       // checkboxes
@@ -568,6 +613,8 @@
 
       $('body').on('keyup', bodyOnKeyUp)
       // $('body').on('mousewheel DOMMouseScroll', onWheel)
+
+      showConfigMenu(`notesConfigDivId`)
    }
 
    // ---------------------------------------------------------
@@ -636,42 +683,50 @@
    }
 
    // --------------------------------------------------------------------------
-   function onChangeDrawMode(event)
+   function onChangeDrawMode(arg)
    {
-      console.log(`change draw mode to: ${event.target.value}`)
-      drawEngine.setDrawMode(event.target.value)
+      if ('object' === typeof arg)
+      {
+         console.log(`change draw mode to: ${arg.target.value}`)
+         showDrawMode(arg.target.value)
+         drawEngine.setDrawMode(arg.target.value)
+      }
+      else if ('string' === typeof arg)
+      {
+         console.log(`change draw mode to: ${arg}`)
+         showDrawMode(arg)
+         drawEngine.setDrawMode(arg)
+      }
+      $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
    }
 
    // --------------------------------------------------------------------------
    // renders to new canvas, opens in new window as data uri
-   // TODO : find better way to do this than giant string
+   // TODO : find better way to do this than giant string?
    function viewMandala()
    {
       let drawCanvas = getDrawCanvas();
 
-      var oldCtx = drawCanvas.getContext("2d")
+      var oldCtx = drawCanvas.getContext('2d')
 
-      var newCanvas = document.createElement("canvas")
-      var newCtx = newCanvas.getContext("2d")
+      var newCanvas = document.createElement('canvas')
+      var newCtx = newCanvas.getContext('2d')
 
       newCanvas.id = 'Mandala'
       newCanvas.width = drawCanvas.width
       newCanvas.height = drawCanvas.height
 
-      var oldCtx = drawCanvas.getContext("2d")
-      data = oldCtx.getImageData(0, 0, newCanvas.width, newCanvas.height)
-      newCtx.putImageData( data, 0, 0 )
-
-      // don't forget the draw buffer...
-      let tempGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:newCanvas})
-      renderStrokeBuffer(tempGraphicsEngine, false)
+      // render draw canvas AND stroke buffer
+      newCtx.drawImage(getDrawCanvas(), 0, 0)
+      newCtx.drawImage($('#strokeBufferCanvasId')[0], 0, 0)
 
       // var compositeOperation = oldCtx.globalCompositeOperation
+      // fill, since canvas has no background
       newCtx.globalCompositeOperation = 'destination-over'
       newCtx.fillStyle = '#FFFFFF'
       newCtx.fillRect(0,0, newCanvas.width, newCanvas.height)
 
-       var dataURL = newCanvas.toDataURL("image/jpeg");
+       var dataURL = newCanvas.toDataURL('image/jpeg');
 
        window.open(dataURL)
    }
@@ -707,7 +762,7 @@
    </script>
 
    <ul id="mainMenuId">
-      <li><img src='assets/drawing.png' width='25px' height='25px' onclick='showConfigMenu(`drawConfigDivId`)'/></li>
+      <li><img id='drawModeMenuImgId' src='assets/freeform.png' width='25px' height='25px' onclick='showConfigMenu(`drawConfigDivId`)'/></li>
       <li><img src='assets/flower.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/></li>
       <li><img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/></li>
    </ul>
@@ -765,12 +820,23 @@
       <br>
       <button id='undoButtonId' class='flatButton' onclick='onClickUndoButton()'><span class='highlightletter'>u</span>ndo</button>
       <br>
+      <button id='clearDrawingButtonId' class='flatButton' onclick='onClearDrawingButton()'>clear (<span class='highlightletter'>X</span>)</button>
+      <br>
       <button id='viewButtonId' class='flatButton' onclick='onClickViewButton()'><span class='highlightletter'>v</span>iew</button>
       <br>
-      <button id='clearDrawingButtonId' class='flatButton' onclick='onClearDrawingButton()'>clear (<span class='highlightletter'>X</span>)</button>
+      <br>
+      <button id='showNotesButtonId' class='flatButton' onclick='showConfigMenu(`notesConfigDivId`)'>notes</button>
+   </div>
+
+   <div id='notesConfigDivId' class='menu_transparent configDivClass'>
+      <span>notes</span>
+      <button class='dismissButton flatButton' onclick='dismissConfigMenus()'>X</button>
+      <br>
+      <br>
    </div>
 
    <div id="canvasContainerId">
-      <span id='numPetalsSpanId' class='transparent'>69</span>
+      <span id='numPetalsSpanId' class='transparent'></span>
+      <span id='drawModeSpanId' class='transparent'></span>
    </div>
 </body>

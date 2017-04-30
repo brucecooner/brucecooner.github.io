@@ -7,7 +7,7 @@
     <meta name="description" content="graphics tinkering">
 
     <!-- TODO: do we need type attributes here? -->
-    <!-- TODO: can we push the dependencies into their dependent modules?  -->
+    <!-- TODO: can we push the dependencies into their dependent modules? (not easily) -->
     <link rel="stylesheet" type="text/css" href="mandalaStyles.css">
     <script src="libs/jquery-3.1.1.min.js"></script>
     <script src="libs/utility.js"></script>
@@ -15,6 +15,7 @@
     <script src="libs/WatchedValue.js"></script>
     <script src="libs/debugDiv.js"></script>
     <script src="libs/fnc2d.js"></script>
+    <script src="libs/docVisible.js"></script>
 
     <script src="graphicsCommands.js"></script>
     <script src="graphicsEngine.js"></script>
@@ -23,51 +24,48 @@
     <script src="drawModeLines.js"></script>
     <script src="drawModeContinuous.js"></script>
     <script src="drawModeCircles.js"></script>
+    <script src="drawModeCurves.js"></script>
     <script src="drawModeErase.js"></script>
     <script src="cursorEngine.js"></script>
     <script src="drawEngine.js"></script>
     <script src="mandala.js"></script>
     <!-- <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' /> -->
 </head>
-<body onload="onBodyLoad()">
+<!-- <body onload="onBodyLoad()" onresize="onBodyResize()"> -->
+<body onresize="onBodyResize()">
 
    <!--
    TODO:
    BUGS:
-      -'jitter' induced by changing mirror line
-      -eraser doesn't work unless moving, can't click-erase
-      -eraser needs to perform true transparency on canvas
    -FEATURES:
+      -prettier help than notes div
+      -confirm dialog on clear, or maybe undoing clears
       -snap to...things
       -how about a REdo?
-      -confirm dialog on clear, or maybe undoing clears
       -color selection?
       -line width selection
       -draw mode specific config? (line width, eraser size, etc.)
       -guide opacity?
-      -guide distance markers
-      -configurable color journey
+      -configurable color journey / switch to HSL
+      -guide distance markers ?
       -line choices (size, shape, helix?, etc.)
    -TECH:
+      -auto-init the mode selector
       -better way to view than giant base-64 string?
       -paths instead of lines? Or maybe variable point lines?
       -have continuous draw use paths
       -mandala can recreate from parameters
       -officially migrate to K&R brackets (grumble)
       -better way to trigger renders (pub/sub maybe?)
-      -should the canvas just fill the damn window?
       -render command arrays with workers?
       -get handle on naming functions in mandala, general functionality
-      -clean up logic/functionality around the mirror stuff!
       -use library for event listening attach
    -LAYOUT:
    -->
 
    <script>
-   // consts
-   const canvasSize = 800
 
-   const drawModeNames = ['freeform', 'lines', 'circles']
+   const drawModeNames = ['freeform', 'curves', 'lines', 'circles']
 
    const notesLines = [
       'space : toggle draw mode',
@@ -89,8 +87,20 @@
    // to the drawing canvas
    const strokeBufferCanvasId = 'strokeBufferCanvasId'
 
+   // debugging/helper output, not meant for general use
+   const scratchCanvasId = 'scratchCanvasId'
+   const scratchGraphicsEnabled = false
+
    // order in which canvases are created
-   const canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, cursorCanvasId ]
+   let canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, cursorCanvasId ]
+
+   // scratch canvas has to be next to last, as input is read from cursor canvas
+   // (well technically input doesn't HAVE to be read from cursor canvas,
+   // but I'm keeping it that way cause it kind of makes sense)
+   if (scratchGraphicsEnabled)
+   {
+      canvasOrder.splice(canvasOrder.length - 1, 0, scratchCanvasId)
+   }
 
    // ==========================================================================
    const delayBeforeColorJourneyStart = 55
@@ -101,6 +111,10 @@
    // drawing
    var drawEngine = null
    var colorJourney = null
+
+   // which petal of mandala cursor is on
+   cursorCurrentPetal = null
+   cursorCurrentNearestLine = null
 
    // --------------------------------------------------------------------------
    // returns color speed given a normalized scale value
@@ -113,6 +127,18 @@
    {
       console.log(`setting color journey scale:${scale}`)
       colorJourney.setSpeed(getColorJourneySpeed(1 - scale))
+   }
+
+   // --------------------------------------------------------------------------
+   function getClosestGuideGraphics()
+   {
+      let canvasOrigin = getDrawingCenter()
+      let line = new fnc2d.Line(cursorCurrentNearestLine).scaleEq(100).translateEq(canvasOrigin)
+      let graphics = [ GraphicsCommands.clear() ]
+      graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#FF0000'))
+      graphics.push( GraphicsCommands.line(line.p1, line.p2))
+
+      return graphics
    }
 
    // --------------------------------------------------------------------------
@@ -145,37 +171,54 @@
    }
 
    // --------------------------------------------------------------------------
+   function resizeCanvases()
+   {
+      $('.dynamicCanvas').each( function()
+      {
+         this.width = this.clientWidth
+         this.height = this.clientHeight
+      })
+   }
+
+   // --------------------------------------------------------------------------
    // canvases
-   // receives: config {canvasOrder, canvasSize }
+   // receives: config {canvasOrder }
    // --------------------------------------------------------------------------
    function createCanvases( config )
    {
       var canvasContainerEl = document.getElementById('canvasContainerId')
 
-      var left = `${canvasContainerEl.clientWidth / 2 - canvasSize / 2}px`
-      var top = `${canvasContainerEl.clientHeight / 2 - canvasSize / 2}px`
+      // var left = `${canvasContainerEl.clientWidth / 2 - canvasSize / 2}px`
+      // var top = `${canvasContainerEl.clientHeight / 2 - canvasSize / 2}px`
 
-      canvasOrder.forEach( function(currentId)
+      config.canvasOrder.forEach( function(currentId)
       {
-         cvs = document.createElement("canvas")
+         $newCvs = $("<canvas></canvas>")
+         $newCvs[0].id = currentId
+         $newCvs.addClass('dynamicCanvas')
+         $newCvs[0].width = window.innerWidth
+         $newCvs[0].height = window.innerHeight
 
-         cvs.id = currentId
-         cvs.width = config.canvasSize;
-         cvs.height = config.canvasSize;
-
-         cvs.style.left = left
-         cvs.style.top  = top
-
-         canvasContainerEl.appendChild(cvs)
+         $('#canvasContainerId').append($newCvs)
       })
+   }
 
+   // --------------------------------------------------------------------------
+   // returns center coordinate of drawing canvas
+   function getDrawingCenter()
+   {
+      let drawCanvas = getDrawCanvas()
+
+      return new fnc2d.Point(drawCanvas.width / 2, drawCanvas.height / 2)
    }
 
    // ==========================================================================
    // buffer stuff
    // becomes an array of drawStroke's
    var strokeBuffer = []
-   const strokeBufferSize = 25
+   const strokeBufferSize = 5 //25
+
+   var allStrokesBuffer = []
 
    // --------------------------------------------------------------------------
    function undo()
@@ -207,11 +250,13 @@
    // ---------------------------------------------------------
    function toCanvasSpace(point)
    {
-      return new fnc2d.Point(point).translate(canvasSize / 2)
+      cvs = getDrawCanvas()
+      return new fnc2d.Point(point).translate( cvs.width / 2, cvs.height / 2)
    }
    function toMandalaSpace(point)
    {
-      return new fnc2d.Point(point).translate(-1 * (canvasSize / 2))
+      cvs = getDrawCanvas()
+      return new fnc2d.Point(point).translate(-1 * (cvs.width / 2), -1 * (cvs.height / 2))
    }
 
    // ---------------------------------------------------------
@@ -222,7 +267,9 @@
 
       if ( mandala.drawGuides )
       {
-         lines = mandala.RenderGuides(canvasSize / 2)
+         let drawCenter = getDrawingCenter()
+         guideLength = drawCenter.delta(0,0).length() // note:distance to corner
+         lines = mandala.renderGuides(guideLength)
 
          linesCommands = lines.guideLines.map( function(lineParams)
          {
@@ -231,6 +278,8 @@
          })
 
          commands = commands.concat( linesCommands )
+
+         commands.push(GraphicsCommands.quadraticCurve({x:0,y:0}, {x:400,y:0},{x:200,y:-50}))
 
          if (lines.halfGuideLines.length > 0)
          {
@@ -253,6 +302,7 @@
    {
       outputGraphicsEngine.execute(GraphicsCommands.clear())
       strokeBufferGraphicsEngine.execute( GraphicsCommands.clear())
+      allStrokesBuffer = []
       strokeBuffer = []
    }
 
@@ -272,8 +322,8 @@
          drawParameters.strokeStyle = '#000000'
       }
 
-      // note that mandala has no knowledge of element/canvas sizes
-      let canvasOrigin = new fnc2d.Point( canvasSize/2, canvasSize/2)
+      // note that mandala keeps no knowledge of element/canvas sizes
+      let canvasOrigin = getDrawingCenter()
 
       let mandalaState = mandala.getState()
 
@@ -318,6 +368,8 @@
          commitStroke = strokeBuffer.splice(0, 1)[0]
          mandala.render(commitStroke, outputGraphicsEngine)
 
+         allStrokesBuffer.push(commitStroke)
+
          strokeBuffer.push(newStroke)
          renderStrokeBuffer(strokeBufferGraphicsEngine, true)
       }
@@ -344,20 +396,69 @@
       mandala.render(renderObject, cursorGraphicsEngine)
    }
 
+   // -------------------------------------------------
+   // returns : { petalNum:number, closestGuide:{p1:{x,y}, p2:{x,y}}}}
+   function calcPetalNumAndClosestGuide(point)
+   {
+      // note : starting along -y no matter if petals are offset (this effectively
+      // transforms petals into 'local' space, or offset == 0)
+      let basis = new fnc2d.Line([0,0], [0,-1])
+
+      // note : unrotating by petalsOffset so basis/delta are both at zero
+      let delta = new fnc2d.Line([0,0], point.rotate(-mandala.petalsOffset * mandala.radiansPerPetal()))
+
+      let angle = delta.angleTo(basis)
+      if (delta.p2.x < 0)
+      {
+         angle = Math.PI + (Math.PI - angle)
+      }
+
+      // debugDiv.add('pmDelta', `pm_delta:${delta.str()}`)
+      debugDiv.add('pmAngle', `pm_angle:${angle}`)
+
+      // which petals between?
+      let petalNum = Math.floor(angle / mandala.radiansPerPetal())
+
+      let closestGuideRotation = petalNum * mandala.radiansPerPetal()
+      // is point past halfway point of petal?
+      if ( angle > (petalNum * mandala.radiansPerPetal()) + (mandala.radiansPerPetal() / 2))
+      {
+         closestGuideRotation += mandala.radiansPerPetal()
+      }
+      let endPoint = new fnc2d.Point(0, -1).rotate(closestGuideRotation)
+
+      let closestGuide = new fnc2d.Line([0,0], endPoint)
+
+      // return petalNum
+      return { petalNum, closestGuide }
+   }
+
    // --------------------------------------------------------------------------
    // tell this module when draw cursor moves
    // receives: point{x,y} (in canvas space)
    function onCursorMove(point)
    {
       debugDiv.add('cursormove', `(main)cursor:${point.str()}`)
-      // if (mandala.mirrorGuides )
-      // {
-      //    mirrorLine = mandala.NearestGuideLine(point)
-      //
-      //    mandala.setMirrorLine( mirrorLine )
-      //    debugDiv.add('mirrorLine1', `m. line p1:${mirrorLine.p1.x},${mirrorLine.p1.y}`)
-      //    debugDiv.add('mirrorLine2', `m. line p2:${mirrorLine.p2.x},${mirrorLine.p2.y}`)
-      // }
+
+      let cursorAndGuide = calcPetalNumAndClosestGuide(point)
+
+      cursorCurrentPetal = cursorAndGuide.petalNum
+      cursorCurrentNearestLine = cursorAndGuide.closestGuide
+
+      debugDiv.add('curPetal', `cur_petal:${cursorCurrentPetal}`)
+
+      if (mandala.mirrorGuides )
+      {
+         mandala.setMirrorLine( cursorAndGuide.closestGuide )
+         debugDiv.add('mirrorLine1', `m. line p1:${mirrorLine.p1.x},${mirrorLine.p1.y}`)
+         debugDiv.add('mirrorLine2', `m. line p2:${mirrorLine.p2.x},${mirrorLine.p2.y}`)
+      }
+
+      // TODO : this should be a function?
+      if (scratchGraphicsEngine)
+      {
+         scratchGraphicsEngine.render()
+      }
 
       renderCursorGraphics()
    }
@@ -375,6 +476,7 @@
    var outputGraphicsEngine = null
    var guidesGraphicsEngine = null
    var strokeBufferGraphicsEngine = null
+   var scratchGraphicsEngine = null
 
    function initGraphicsEngines()
    {
@@ -382,6 +484,32 @@
       outputGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:getDrawCanvas()})
       guidesGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:document.getElementById(guidesCanvasId)})
       strokeBufferGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:document.getElementById(strokeBufferCanvasId)})
+
+      let scratchCanvas = document.getElementById(scratchCanvasId)
+      if (scratchCanvas)
+      {
+         scratchGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:scratchCanvas})
+         scratchGraphicsEngine.addRenderObject( getClosestGuideGraphics )
+      }
+      else
+      {
+         scratchGraphicsEngine = null
+      }
+   }
+
+   // --------------------------------------------------------------------------
+   function reInitGraphicsEngines()
+   {
+      // TODO : handl these damned things dynamically
+      cursorGraphicsEngine.initContext()
+      outputGraphicsEngine.initContext()
+      guidesGraphicsEngine.initContext()
+      strokeBufferGraphicsEngine.initContext()
+
+      if (scratchGraphicsEngine)
+      {
+         scratchGraphicsEngine.initContext()
+      }
    }
 
    // --------------------------------------------------------------------------
@@ -545,14 +673,86 @@
       [ function(value) { mandala.mirrorGuides = value }])
 
    // ---------------------------------------------------------
-   // handlers
-   // ---------------------------------------------------------
-   function onBodyLoad()
+   var resizesTimeoutId = null
+   function resizesTimeout()
    {
-      createCanvases({canvasOrder, canvasSize})
+      previousCanWidth = getDrawCanvas().width
+      previousCanHeight = getDrawCanvas().height
 
+      // note : resizing should clear
+      resizeCanvases()
+      reInitGraphicsEngines()
+
+      // Total re-render. Damn, fool. TODO: May need a 'please wait' or something
+      // eventually.
+      allStrokesBuffer.forEach( function(currentStroke)
+      {
+         mandala.render(currentStroke, outputGraphicsEngine)
+      })
+
+      renderStrokeBuffer(strokeBufferGraphicsEngine, true)
+
+      renderGuides()
+
+      // reset draw engine xlation
+      drawEngine.translation = getDrawingCenter().scaleEq(-1)
+   }
+
+   // --------------------------------------------------------------------------
+   // handlers
+   // --------------------------------------------------------------------------
+   /*
+   // browsers are, for now, only sending resize events when I switch back to
+   // tab, so won't deploy this handler just yet, but will leave in place just
+   // in case
+   var resizeOnVisChange = false
+   function onVisibilityChange(isVisible)
+   {
+      if (isVisible)
+      {
+         console.log('in main, show')
+         if (resizeOnVisChange)
+         {
+            console.log('need resize...')
+            resizeOnVisChange = false
+            resizesTimeout()
+         }
+      }
+      else
+      {
+         console.log('in main, hide')
+      }
+   }
+   */
+
+   // --------------------------------------------------------------------------
+   function onBodyResize()
+   {
+      if (docVisible.isHidden)
+      {
+         // if I see this log it means I'll have to handle hidden resizes
+         console.log(`NOTE: resized while hidden`)
+         // resizeOnVisChange = true
+      }
+      else
+      {
+         if (resizesTimeoutId)
+         {
+            clearTimeout(resizesTimeoutId)
+         }
+         resizesTimeoutId = setTimeout(resizesTimeout, 200)
+      }
+   }
+
+   // --------------------------------------------------------------------------
+   //function onBodyLoad()
+   $(document).ready( function()
+   {
+      createCanvases({canvasOrder})
+
+      // disable right click menu
       $('#cursorCanvasId')[0].oncontextmenu = function(){return false;}
-      // TODO: set opacity dynamically
+      // TODO: set guides opacity dynamically
       $('#guidesCanvasId')[0].style.opacity = 0.5
 
       // --- DUCTWORK ---
@@ -576,7 +776,7 @@
       // --- graphics setup ---
       initGraphicsEngines()
 
-      let drawEngineTranslation = new fnc2d.Point( -canvasSize / 2, -canvasSize /2)
+      let drawEngineTranslation = getDrawingCenter().scaleEq(-1)
       drawEngine = new DrawEngine.DrawEngine({ inputCanvas:getInputCanvas(),
                                                 renderCursorGraphics:renderCursorGraphics,
                                                 drawOutputGraphics:drawOutput,
@@ -597,8 +797,10 @@
       $('#mirrorGuidesCheckboxId')[0].checked = mandala.mirrorGuides
       $('#numPetalsConfigSpanId').text(mandala.numPetals)
 
-      // DRAW
+      // initial draw
       renderGuides()
+
+      docVisible.initVisibilityHandling() //onVisibilityChange)
 
       // color journey stuff
       let colorJourneySpeedCallback = myRangeInput.createRange({id:'colorJourneySpeedId',
@@ -615,7 +817,7 @@
       // $('body').on('mousewheel DOMMouseScroll', onWheel)
 
       showConfigMenu(`notesConfigDivId`)
-   }
+   }) // end document.ready
 
    // ---------------------------------------------------------
    function onClearDrawingButton()
@@ -762,6 +964,7 @@
    </script>
 
    <ul id="mainMenuId">
+      <!--- TODO : fix this lame ass hardwired initial image, should be driven by mode --->
       <li><img id='drawModeMenuImgId' src='assets/freeform.png' width='25px' height='25px' onclick='showConfigMenu(`drawConfigDivId`)'/></li>
       <li><img src='assets/flower.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/></li>
       <li><img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/></li>
@@ -814,8 +1017,9 @@
       <br><br>
       <select id='drawModeSelectId' onchange='onChangeDrawMode(event)'>
          <option value='freeform'>freeform</option>
+         <option value='curves'>curves</option>
          <option value='lines'>lines</option>
-         <option value='circles'>circles</opotion>
+         <option value='circles'>circles</option>
       </select>
       <br>
       <button id='undoButtonId' class='flatButton' onclick='onClickUndoButton()'><span class='highlightletter'>u</span>ndo</button>
@@ -835,8 +1039,10 @@
       <br>
    </div>
 
+   <span id='numPetalsSpanId' class='overlayText transparent'></span>
+   <span id='drawModeSpanId' class='overlayText transparent'></span>
+
    <div id="canvasContainerId">
-      <span id='numPetalsSpanId' class='transparent'></span>
-      <span id='drawModeSpanId' class='transparent'></span>
    </div>
+
 </body>

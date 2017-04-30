@@ -1,4 +1,4 @@
-;'use strict'
+;'use strict;'
 // Notes:
 // -assumes points are always in 'mandala' space (already relative to center)
 var Mandala =
@@ -22,8 +22,22 @@ var Mandala =
       // if not null, use this line as mirror
       this.mirrorLine = null
 
+      // whether or not to render all petals or just singular objects
+      this.renderPetals = true
+
       // cached stuff
       this.lastRenderedGuides = null
+
+      // -----------------------------------------------------------------------
+      this.radiansPerPetal = function()
+      {
+         return Math.PI * 2 / this.numPetals
+      }
+      // -----------------------------------------------------------------------
+      this.offsetRadians = function()
+      {
+         return (Math.PI * 2 / this.numPetals) * this.petalsOffset
+      }
 
       // -----------------------------------------------------------------------
       // returns object that encapsulates current state
@@ -36,15 +50,14 @@ var Mandala =
       // -----------------------------------------------------------------------
       this.setMirrorLine = function(line)
       {
-         console.log(`setting mirror line`)
-         this.mirrorLine = line
+         this.mirrorLine = new fnc2d.Line(line)
       }
 
       // -----------------------------------------------------------------------
       // renders a series of lines to represent the spokes that form the guide
       // returns : { guideLines:[{p1:{x,y}}, p2:{x,y}}],
       //             halfGuideLines:[ { p1:{x,y}, p2:{x,y} } ]}
-      this.RenderGuides = function(guideLength)
+      this.renderGuides = function(guideLength)
       {
          const radiansPerSpoke = (Math.PI * 2) / this.numPetals
          let currentRotation = 0.0
@@ -57,8 +70,13 @@ var Mandala =
 
          for (var currentSpoke = 0; currentSpoke < this.numPetals; ++currentSpoke)
          {
-            // rot_point = my2d.rotatePoint( 0.0, guideLength, currentRotation)
-            let rot_point = new fnc2d.Point(0, guideLength).rotate(currentRotation)
+            // note that we use 0,-guideLength as the 'base' guide line. This makes
+            // for the most aesthetically pleasing arrangement, but unfortunately
+            // the canvases use +x as the rotation = 0 axis. To be honest I'm not
+            // entirely sure my 2d rotate turns the same direction as the canvas rotate,
+            // but it hasn't led to any bugs yet, so...  Anyway, if you start expected to draw
+            // arcs on a canvas, you will want to be aware of this quirk
+            let rot_point = new fnc2d.Point(0, -guideLength).rotate(currentRotation)
 
             guideLines.push( new fnc2d.Line( [0,0], [Math.floor(rot_point.x),Math.floor(rot_point.y)]))
 
@@ -72,7 +90,7 @@ var Mandala =
             for (var currentSpoke = 0; currentSpoke < this.numPetals; ++currentSpoke)
             {
                // rot_point = my2d.rotatePoint( 0.0, guideLength, currentRotation)
-               let rot_point = new fnc2d.Point(0, guideLength).rotate(currentRotation)
+               let rot_point = new fnc2d.Point(0, -guideLength).rotate(currentRotation)
 
                halfGuideLines.push( new fnc2d.Line( [0,0], [Math.floor(rot_point.x),Math.floor(rot_point.y)]))
 
@@ -242,10 +260,21 @@ var Mandala =
          return GraphicsCommands.circle(centerMirrored.x, centerMirrored.y, command.parameters.radius)
       }
 
+      // -----------------------------------------------------------------------
+      this.mirrorQuadraticCurveCommand = function(command, mirrorLine)
+      {
+         let p1Mirrored = new fnc2d.Point(command.parameters.p1).reflect(mirrorLine).floorEq()
+         let p2Mirrored = new fnc2d.Point(command.parameters.p2).reflect(mirrorLine).floorEq()
+         let p3Mirrored = new fnc2d.Point(command.parameters.p3).reflect(mirrorLine).floorEq()
+
+         return GraphicsCommands.quadraticCurve(p1Mirrored, p2Mirrored, p3Mirrored)
+      }
+
       this.mirrorHandlers =
       {
          'line':this.mirrorLineCommand,
          'circle':this.mirrorCircleCommand,
+         'quadraticCurve':this.mirrorQuadraticCurveCommand,
       }
 
       // -----------------------------------------------------------------------
@@ -266,7 +295,7 @@ var Mandala =
          }
          else
          {
-            newCommands.push(command)
+            newCommands.push(commands)
             if (this.mirrorHandlers.hasOwnProperty(commands.command))
             {
                newCommands.push(this.mirrorHandlers[commands.command](commands, mirrorLine))
@@ -287,12 +316,6 @@ var Mandala =
          let rotationPerPetal = Math.PI * 2 / renderObject.mandalaState.numPetals
          let rotCommand = GraphicsCommands.setDrawParameter('rotate', rotationPerPetal)
 
-         // if (null !== renderObject.mirrorLine)
-         // {
-         //    let mirroredCommands = this.mirrorCommands(renderObject.commands, renderObject.mandalaState.mirrorLine)
-         //    renderObject.commands = mirroredCommands
-         // }
-
          graphicsEngine.saveState()
 
          this.dispatchDrawParameters(renderObject.drawParameters, graphicsEngine)
@@ -302,10 +325,14 @@ var Mandala =
             graphicsEngine.execute(GraphicsCommands.clear())
          }
 
-         this.setOrigin(renderObject.origin, graphicsEngine)
+         // note : ignoring stored origin in favor of calculated, for now
+         // this.setOrigin(renderObject.origin, graphicsEngine)
+         this.setOrigin(graphicsEngine.getCenter(), graphicsEngine)
 
+         // TODO : debug way to turn off other petals
          let i = 0
-         for (i = 0; i < renderObject.mandalaState.numPetals; i += 1)
+         let maxIndex = (this.renderPetals) ? renderObject.mandalaState.numPetals : 1
+         for (i = 0; i < maxIndex; i += 1)
          {
             graphicsEngine.execute(renderObject.commands)
             graphicsEngine.execute(rotCommand)

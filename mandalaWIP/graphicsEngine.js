@@ -3,11 +3,18 @@ var GraphicsEngine =
    // config: {canvas:<canvas>}
    GraphicsEngine:function( config )
    {
+      this.initContext = function()
+      {
+         this.context = this.canvas.getContext('2d')
+         // you get weird disconnected lines if you don't initialize the dash
+         this.context.setLineDash([0,0])
+      }
+
       this.canvas = config.canvas
 
-      this.context = this.canvas.getContext("2d");
-      // you get weird disconnected lines if you don't initialize the dash
-      this.context.setLineDash([0,0])
+      this.initContext()
+      // this.context = this.canvas.getContext('2d');
+      // this.context.setLineDash([0,0])
 
       this.drawParameters = {}
       // -----------------------------------------------------------------------
@@ -71,11 +78,22 @@ var GraphicsEngine =
          this.context.stroke();
       }
 
+      // -----------------------------------------------------------------------
+      drawQuadraticCurve = function( parameters )
+      {
+         this.context.beginPath();
+         this.context.moveTo( parameters.p1.x, parameters.p1.y);
+         this.context.quadraticCurveTo(parameters.p2.x, parameters.p2.y,
+                                       parameters.p3.x, parameters.p3.y);
+         this.context.stroke();
+      }
+
       this.commandHandlers = {
          [GraphicsCommands.cmd_clear]:clearCanvas.bind(this),
          [GraphicsCommands.cmd_setDrawParameter]:setDrawParameter.bind(this),
          [GraphicsCommands.cmd_line]:drawLine.bind(this),
          [GraphicsCommands.cmd_circle]:drawCircle.bind(this),
+         [GraphicsCommands.cmd_quadraticCurve]:drawQuadraticCurve.bind(this),
       }
 
       // -----------------------------------------------------------------------
@@ -104,6 +122,63 @@ var GraphicsEngine =
       this.restoreState = function()
       {
          this.context.restore()
+      }
+
+      // stuff this graphics engine will use when rendering, can be:
+      // -a function, will call and render results
+      // -an array, will render contents
+      // Note : objects are always rendered in order they were added
+      // GraphicsEngine not responsible if you delete something it was using.
+      this.renderObjects = []
+
+      // -----------------------------------------------------------------------
+      this.addRenderObject = function(newObject)
+      {
+         this.renderObjects.push( newObject )
+      }
+
+      // -----------------------------------------------------------------------
+      this.removeRenderObject = function(removeObject)
+      {
+         this.renderObjects.forEach( function(currentObject, index)
+         {
+            if (currentObject === removeObject)
+            {
+               this.renderObjects.splice(index,1)
+               return false
+            }
+         }, this)
+      }
+
+      // -----------------------------------------------------------------------
+      // renders all of the stuff in this.renderObjects
+      // Note:
+      // -saves/restores state around render
+      this.render = function()
+      {
+         this.saveState()
+
+         this.renderObjects.forEach( function(currentObject)
+         {
+            if (Array.isArray(currentObject))
+            {
+               this.execute(currentObject)
+            }
+            else if (typeof currentObject === 'function')
+            {
+               this.execute( currentObject() )
+            }
+         }, this)
+
+         this.restoreState()
+      }
+
+      // -----------------------------------------------------------------------
+      // utility to get current center of canvas
+      // returns { x:number, y:number }
+      this.getCenter = function()
+      {
+         return { x:this.canvas.width / 2, y:this.canvas.height / 2}
       }
    }
 }

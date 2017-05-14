@@ -15,13 +15,18 @@ var DrawModeCircles =
       {
          if (null == this.circleCenter)
          {
-            this.circleCenter = new fnc2d.Point(this.drawEngine.getCursorCoords())
+            if (false === this.drawEngine.isRightMouseButton)
+            {
+               this.circleCenter = new fnc2d.Point(this.drawEngine.getCursorCoords())
+               this.drawEngine.manageTempSnapPoints(this.circleCenter)
+            }
          }
          else
          {
             if (this.drawEngine.isRightMouseButton)   // cancel current circle
             {
                this.circleCenter = null
+               this.drawEngine.manageTempSnapPoints(null)
             }
             else
             {
@@ -29,8 +34,9 @@ var DrawModeCircles =
                gComms = []
                // gComms.push( GraphicsCommands.setDrawParameter('fillStyle', null ))
                gComms.push( GraphicsCommands.circle(this.circleCenter.x, this.circleCenter.y, radius ) )
-               this.drawEngine.drawOutputGraphics(gComms)
+               this.drawEngine.drawOutputGraphics(gComms, [this.circleCenter])
                this.circleCenter = null
+               this.drawEngine.manageTempSnapPoints(null)
             }
          }
       }.bind(this)

@@ -18,6 +18,7 @@ var DrawModeCurves =
          {
             this.point1 = null
             this.point2 = null
+            this.drawEngine.manageTempSnapPoints(null)
          }
          else
          {
@@ -25,6 +26,7 @@ var DrawModeCurves =
             if (null == this.point1)
             {
                this.point1 = this.drawEngine.getCursorCoords()
+               this.drawEngine.manageTempSnapPoints(this.drawEngine.cursorCoords)
             }
             else if (null == this.point2)
             {
@@ -35,7 +37,8 @@ var DrawModeCurves =
                // commit with current coords as control point
                this.drawEngine.drawOutputGraphics(GraphicsCommands.quadraticCurve(  this.point1,
                                                                                     this.drawEngine.getCursorCoords(),
-                                                                                    this.point2 ))
+                                                                                    this.point2 ),
+                                                [this.point1, this.point2])
                this.point1 = this.point2
                this.point2 = null
             }

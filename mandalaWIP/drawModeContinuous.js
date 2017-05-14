@@ -17,6 +17,9 @@ var DrawModeContinuous =
       // length of drawing allowed before forcing a stroke commit
       this.maxStrokeLength = 50
 
+      this.firstLine = false
+      this.strokeBeginCoords = null
+
       // -----------------------------------------------------------------------
       this.beginStroke = function()
       {
@@ -50,14 +53,19 @@ var DrawModeContinuous =
                // if (this.strokeLineCounter >= 5)
                if (this.strokeDelta >= this.maxStrokeLength)
                {
-                  this.drawEngine.drawOutputGraphics(this.currentStrokeLines)
+                  snapPoints = null
+                  if (this.firstLine)
+                  {
+                     snapPoints = [this.strokeBeginCoords]
+                  }
+
+                  this.drawEngine.drawOutputGraphics(this.currentStrokeLines, snapPoints)
                   this.beginStroke()
+                  this.firstLine = false
                }
             }
          }
       }
-
-      this.aveSpeedIntervalId = 0
 
       // -----------------------------------------------------------------------
       this.onMouseUp = function(event)
@@ -69,7 +77,7 @@ var DrawModeContinuous =
             this.currentStrokeLines.push( GraphicsCommands.line(point, point.translate(1,1) ))
          }
 
-         this.drawEngine.drawOutputGraphics(this.currentStrokeLines)
+         this.drawEngine.drawOutputGraphics(this.currentStrokeLines, [this.drawEngine.getCursorCoords()])
 
          this.currentStrokeLines = null
       }
@@ -78,9 +86,11 @@ var DrawModeContinuous =
       this.onMouseDown = function(event)
       {
          // begin new stroke
-         this.lastLineStart = new fnc2d.Point(this.drawEngine.cursorCoords)
+         this.lastLineStart = this.drawEngine.getCursorCoords()
 
          this.beginStroke()
+         this.strokeBeginCoords = this.drawEngine.cursorCoords
+         this.firstLine = true
       }
 
 

@@ -27,6 +27,7 @@
     <script src="drawModeCurves.js"></script>
     <script src="drawModeErase.js"></script>
     <script src="cursorEngine.js"></script>
+    <script src="snapPointManager.js"></script>
     <script src="drawEngine.js"></script>
     <script src="mandala.js"></script>
     <!-- <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' /> -->
@@ -37,10 +38,17 @@
    <!--
    TODO:
    BUGS:
+   -mirroring busted with non-zero offset!!!
+   -cancelled strokes don't re-render view
+   -freeform mode line doesn't close when cursor snapped, hmmm...
+   -bug where very short freeform strokes do not generate start snap point
    -FEATURES:
+      -SNAP OBJECTS
+         -snap GRID - doesn't really fit theme does it?
+         -snap to lines?
+         -snap to circles?
       -prettier help than notes div
       -confirm dialog on clear, or maybe undoing clears
-      -snap to...things
       -how about a REdo?
       -color selection?
       -line width selection
@@ -78,6 +86,7 @@
       '< >: halve/double guides',
       'left mouse: draw',
       'right mouse: cancel (some modes)',
+      'ctrl(hold): snap (gray circles)',
    ]
 
    const drawingCanvasId = 'drawingCanvasId'
@@ -87,20 +96,14 @@
    // to the drawing canvas
    const strokeBufferCanvasId = 'strokeBufferCanvasId'
 
-   // debugging/helper output, not meant for general use
+   // temprary-ish stuff, will try to animate at some point
    const scratchCanvasId = 'scratchCanvasId'
-   const scratchGraphicsEnabled = false
+
+   const snapManagerStripeWidth = 50;
+   const snapPointRadius = 5;
 
    // order in which canvases are created
-   let canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, cursorCanvasId ]
-
-   // scratch canvas has to be next to last, as input is read from cursor canvas
-   // (well technically input doesn't HAVE to be read from cursor canvas,
-   // but I'm keeping it that way cause it kind of makes sense)
-   if (scratchGraphicsEnabled)
-   {
-      canvasOrder.splice(canvasOrder.length - 1, 0, scratchCanvasId)
-   }
+   let canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, scratchCanvasId, cursorCanvasId ]
 
    // ==========================================================================
    const delayBeforeColorJourneyStart = 55
@@ -111,10 +114,16 @@
    // drawing
    var drawEngine = null
    var colorJourney = null
+   var snapPointManager = null
+   var tempSnapPointManager = null
 
+   var tempSnapPoints = []
+
+   // status
    // which petal of mandala cursor is on
    cursorCurrentPetal = null
    cursorCurrentNearestLine = null
+   snapModeActive = false
 
    // --------------------------------------------------------------------------
    // returns color speed given a normalized scale value
@@ -132,11 +141,63 @@
    // --------------------------------------------------------------------------
    function getClosestGuideGraphics()
    {
-      let canvasOrigin = getDrawingCenter()
-      let line = new fnc2d.Line(cursorCurrentNearestLine).scaleEq(100).translateEq(canvasOrigin)
-      let graphics = [ GraphicsCommands.clear() ]
+      let line = new fnc2d.Line(cursorCurrentNearestLine).scaleEq(100);
+      let graphics = []
       graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#FF0000'))
       graphics.push( GraphicsCommands.line(line.p1, line.p2))
+
+      return graphics
+   }
+
+   // --------------------------------------------------------------------------
+   function getSnapObjectGraphics()
+   {
+      let graphics = []
+      if (snapModeActive)
+      {
+         graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#DDDDDD') )
+
+         snapPointManager.snapPoints.forEach( function(currentSnapPoint)
+         {
+            graphics.push( GraphicsCommands.circle(currentSnapPoint.center.x, currentSnapPoint.center.y, currentSnapPoint.radius, '#DDDDDD'))
+         });
+
+         tempSnapPointManager.snapPoints.forEach( function(currentSnapPoint)
+         {
+            graphics.push( GraphicsCommands.circle(currentSnapPoint.center.x, currentSnapPoint.center.y, currentSnapPoint.radius, '#DDDDDD'))
+         });
+
+         // graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#AA0000') );
+         // let i = 0;
+         // for (i = 0; i <= 7; i += 1)
+         // {
+         //    let xCoord = i * snapManagerStripeWidth; // todo : magic number for snap stripe width, make const!
+         //    graphics.push( GraphicsCommands.line( new fnc2d.Point(xCoord, -500), new fnc2d.Point(xCoord, 500) ));
+         // }
+
+         // if (drawEngine.currentSnapPoint)
+         // {
+         //    graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#FF0000') )
+         //    let center = drawEngine.currentSnapPoint.coords.translate(canvasOrigin)
+         //
+         //    graphics.push( GraphicsCommands.circle(   center.x,
+         //                                              center.y,
+         //                                              drawEngine.currentSnapPoint.radius, '#DDDDDD'))
+         // }
+      }
+
+      return graphics
+   }
+
+   // --------------------------------------------------------------------------
+   function getScratchGraphics()
+   {
+      let graphics = [ GraphicsCommands.clear() ]
+
+      graphics.push( GraphicsCommands.setDrawParameter( 'translate', getDrawingCenter()));
+
+      graphics = graphics.concat( getClosestGuideGraphics() )
+      graphics = graphics.concat( getSnapObjectGraphics() )
 
       return graphics
    }
@@ -214,21 +275,33 @@
 
    // ==========================================================================
    // buffer stuff
-   // becomes an array of drawStroke's
+   // becomes an array of drawStroke's, graphics commands PLUS snap point names ?
    var strokeBuffer = []
-   const strokeBufferSize = 5 //25
+   const strokeBufferSize = 25
 
    var allStrokesBuffer = []
 
    // --------------------------------------------------------------------------
    function undo()
    {
+      let removedStroke = null
+
       if (strokeBuffer.length > 0)
       {
-         strokeBuffer.splice( strokeBuffer.length - 1, 1)
+         removedStroke = strokeBuffer.splice( strokeBuffer.length - 1, 1)
+
+         if (removedStroke[0].snapPoints)
+         {
+            snapPointManager.removeSnapPoints(removedStroke[0].snapPoints)
+            // for (var currentPoint of removedStroke[0].snapPoints)
+            // {
+            //    console.log(`removing snap point ${currentPoint.name}`)
+            // }
+         }
       }
 
       renderStrokeBuffer(strokeBufferGraphicsEngine, true)
+      scratchGraphicsEngine.render();
 
       debugDiv.add('strokeBuffer', `buffer len:${strokeBuffer.length}`)
    }
@@ -243,6 +316,48 @@
    {
       // currently topmost one
       return document.getElementById(cursorCanvasId)
+   }
+
+   // --------------------------------------------------------------------------
+   // searches for a snap point
+   function findSnapPoint(point)
+   {
+      let foundPoint = null
+
+      if (snapModeActive)
+      {
+         foundPoint = snapPointManager.getSnapPoint(point)
+
+         if (null === foundPoint)
+         {
+            foundPoint = tempSnapPointManager.getSnapPoint(point)
+         }
+      }
+
+      return foundPoint
+   }
+
+   // --------------------------------------------------------------------------
+   function manageTempSnapPoints(point = null)
+   {
+      if (null !== point)
+      {
+         let points = mandala.reflectPoints(point)
+
+         points.forEach( function(curPoint)
+         {
+            let currentPoint = tempSnapPointManager.addSnapPoint(curPoint, snapPointRadius)
+            if (currentPoint)
+            {
+               tempSnapPoints.push(currentPoint)
+            }
+         })
+      }
+      else
+      {
+         tempSnapPointManager.removeSnapPoints(tempSnapPoints)
+         tempSnapPoints = []
+      }
    }
 
    // ----------------------------------------------------------
@@ -304,6 +419,12 @@
       strokeBufferGraphicsEngine.execute( GraphicsCommands.clear())
       allStrokesBuffer = []
       strokeBuffer = []
+
+      snapPointManager.resetPoints()
+      if (scratchGraphicsEngine)
+      {
+         scratchGraphicsEngine.render()
+      }
    }
 
    // --------------------------------------------------------------------------
@@ -350,15 +471,39 @@
 
       strokeBuffer.forEach( function(currentStroke)
       {
-         mandala.render(currentStroke, graphicsEngine, false)
+         mandala.render(currentStroke.graphics, graphicsEngine, false)
       })
    }
 
    // --------------------------------------------------------------------------
    // graphicsCommands : [ {graphic command}, ... ]
-   function drawOutput(graphicsCommands)
+   // snapPointCoords : [ point, ... ]
+   function drawOutput(graphicsCommands, snapPointCoords = null)
    {
       let newStroke = buildMandalaStroke(graphicsCommands, {strokeStyle:'#000000'}, false)
+
+      let newSnapPoints = []
+      if (snapPointCoords)
+      {
+         for (currentPoint of snapPointCoords)
+         {
+            let reflectedPoints = mandala.reflectPoints(currentPoint)
+
+            for (currentReflectedPoint of reflectedPoints)
+            {
+               newSnapPoint = snapPointManager.addSnapPoint(currentReflectedPoint, snapPointRadius)
+
+               // test for rejection (means already a point there)
+               if (newSnapPoint)
+               {
+                  newSnapPoints.push(newSnapPoint)
+               }
+            }
+         }
+         // testing...
+         console.log(`stroke resulted in ${newSnapPoints.length} new snap points`)
+      }
+
 
       // need to commit buffered render to draw canvas?
       if (strokeBuffer.length >= strokeBufferSize)
@@ -366,16 +511,16 @@
          // if strokes are ejected FROM buffer, redraw it fully so there's no overdraw
          // with the draw canvas
          commitStroke = strokeBuffer.splice(0, 1)[0]
-         mandala.render(commitStroke, outputGraphicsEngine)
+         mandala.render(commitStroke.graphics, outputGraphicsEngine)
 
-         allStrokesBuffer.push(commitStroke)
+         allStrokesBuffer.push(commitStroke.graphics)
 
-         strokeBuffer.push(newStroke)
+         strokeBuffer.push({ graphics:newStroke, snapPoints:newSnapPoints })
          renderStrokeBuffer(strokeBufferGraphicsEngine, true)
       }
       else
       {
-         strokeBuffer.push(newStroke)
+         strokeBuffer.push({ graphics:newStroke, snapPoints:newSnapPoints})
          // note : does not call for redraw, nothing was ejected from drawBuffer
          mandala.render(newStroke, strokeBufferGraphicsEngine, false)
       }
@@ -414,12 +559,12 @@
       }
 
       // debugDiv.add('pmDelta', `pm_delta:${delta.str()}`)
-      debugDiv.add('pmAngle', `pm_angle:${angle}`)
+      // debugDiv.add('pmAngle', `pm_angle:${angle}`)
 
       // which petals between?
       let petalNum = Math.floor(angle / mandala.radiansPerPetal())
 
-      let closestGuideRotation = petalNum * mandala.radiansPerPetal()
+      let closestGuideRotation = petalNum * mandala.radiansPerPetal() + (mandala.petalsOffset * mandala.radiansPerPetal())
       // is point past halfway point of petal?
       if ( angle > (petalNum * mandala.radiansPerPetal()) + (mandala.radiansPerPetal() / 2))
       {
@@ -445,7 +590,7 @@
       cursorCurrentPetal = cursorAndGuide.petalNum
       cursorCurrentNearestLine = cursorAndGuide.closestGuide
 
-      debugDiv.add('curPetal', `cur_petal:${cursorCurrentPetal}`)
+      // debugDiv.add('curPetal', `cur_petal:${cursorCurrentPetal}`)
 
       if (mandala.mirrorGuides )
       {
@@ -461,6 +606,12 @@
       }
 
       renderCursorGraphics()
+
+      debugDiv.add(`totalSnapPts`, `snap pts: ${snapPointManager.snapPoints.length}`)
+      debugDiv.add(`lastSnapComp`, `last snap comp: ${snapPointManager.lastSearchPointComparisons}`)
+      debugDiv.add(`totalTempSnapPts`, `tmp snap pts: ${tempSnapPointManager.snapPoints.length}`)
+      debugDiv.add(`lastTempSnapComp`, `last tmp snap comp: ${tempSnapPointManager.lastSearchPointComparisons}`)
+      debugDiv.add('snapModeActive', `snap active:${snapModeActive}`)
    }
 
    // --------------------------------------------------------------------------
@@ -489,7 +640,7 @@
       if (scratchCanvas)
       {
          scratchGraphicsEngine = new GraphicsEngine.GraphicsEngine({canvas:scratchCanvas})
-         scratchGraphicsEngine.addRenderObject( getClosestGuideGraphics )
+         scratchGraphicsEngine.addRenderObject( getScratchGraphics )
       }
       else
       {
@@ -590,12 +741,33 @@
    // {
    //    console.log(`wheel detail:${event.originalEvent.detail}`)
    // }
+   // --------------------------------------------------------------------------
+   function activateSnapMode(active)
+   {
+      snapModeActive = active
+
+      scratchGraphicsEngine.render()
+   }
+
+   // --------------------------------------------------------------------------
+   function bodyOnKeyDown(event)
+   {
+      switch (event.originalEvent.key)
+      {
+         case 'Control':
+            activateSnapMode(true)
+         break;
+      }
+   }
 
    // --------------------------------------------------------------------------
    function bodyOnKeyUp(event)
    {
       switch (event.originalEvent.key)
       {
+         case 'Control':
+         activateSnapMode(false)
+         break;
          case ' ':
             let i = 0
             for (i = 0; i < drawModeNames.length; i += 1)
@@ -752,8 +924,9 @@
 
       // disable right click menu
       $('#cursorCanvasId')[0].oncontextmenu = function(){return false;}
-      // TODO: set guides opacity dynamically
+      // TODO: set  opacities dynamically?
       $('#guidesCanvasId')[0].style.opacity = 0.5
+      $('#scratchCanvasId')[0].style.opacity = 0.5
 
       // --- DUCTWORK ---
       // num petals
@@ -776,12 +949,19 @@
       // --- graphics setup ---
       initGraphicsEngines()
 
+      snapPointManager = new SnapPointManager.SnapPointManager(snapManagerStripeWidth)
+      snapPointManager.addSnapPoint( new fnc2d.Point(0,0), 5, true)
+
+      tempSnapPointManager = new SnapPointManager.SnapPointManager(snapManagerStripeWidth)
+
       let drawEngineTranslation = getDrawingCenter().scaleEq(-1)
       drawEngine = new DrawEngine.DrawEngine({ inputCanvas:getInputCanvas(),
                                                 renderCursorGraphics:renderCursorGraphics,
                                                 drawOutputGraphics:drawOutput,
                                                 cursorMoveCallback:onCursorMove,
-                                                coordsTranslation:drawEngineTranslation})
+                                                coordsTranslation:drawEngineTranslation,
+                                                findSnapPoint:findSnapPoint,
+                                                manageTempSnapPoints:manageTempSnapPoints})
 
       // --- UI INIT ---
       notesLines.forEach( function(currentLine) {
@@ -814,6 +994,7 @@
                                        changePeriod:getColorJourneySpeed(defaultColorJourneyScale)})
 
       $('body').on('keyup', bodyOnKeyUp)
+      $('body').on('keydown', bodyOnKeyDown)
       // $('body').on('mousewheel DOMMouseScroll', onWheel)
 
       showConfigMenu(`notesConfigDivId`)

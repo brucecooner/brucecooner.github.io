@@ -71,7 +71,11 @@ var GraphicsEngine =
          this.context.arc(parameters.x, parameters.y, parameters.radius, 0, Math.PI * 2 );
 
          // at a later time, figure out how to handle filled circles
-         // this.context.fill();
+         if (parameters.fillStyle)
+         {
+            this.context.fillStyle = parameters.fillStyle;
+            this.context.fill();
+         }
 
          this.context.lineWidth = 1;
 
@@ -103,6 +107,11 @@ var GraphicsEngine =
          {
             commands.forEach( function(currentCommand)
             {
+               // console.log(`ge:${currentCommand.command}`)
+               // if (currentCommand.command === undefined)
+               // {
+               //    var breakpoint = 10
+               // }
                this.commandHandlers[currentCommand.command](currentCommand.parameters)
             }, this)
          }

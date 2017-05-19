@@ -166,6 +166,15 @@ fnc2d.Point.prototype.reflect = function(line)
    let lineLen = lineLocal.length();
 
    let lineOriginToPoint = new fnc2d.Line( {x:0,y:0}, pointLocal );
+
+   /*
+   // different way...works really but needs logic to determine proper rotation direction
+   // and you have to be comfortable rotating a lot of points, meh for now
+   let angleTo = lineOriginToPoint.angleTo(lineLocal);
+   lineOriginToPoint.p2.rotateEq(-angleTo * 2);
+   return lineOriginToPoint.p2.translate(line.p1);
+   */
+
    let lineOriginToPointLen = lineOriginToPoint.length();
 
    let unitLineLocal = lineLocal.normalized();

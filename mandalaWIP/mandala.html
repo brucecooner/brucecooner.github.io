@@ -42,6 +42,8 @@
    -bug where very short freeform strokes do not generate start snap point
    -color journey pause doesn't work
    -FEATURES:
+      -right click on draw menu icon to change draw mode
+      -draw mode help notes
       -bilateral symmetry when 2-petals
       -SNAP OBJECTS
          -snap GRID - doesn't really fit theme does it?
@@ -72,17 +74,23 @@
 
    const drawModeNames = ['freeform', 'curves', 'lines', 'circles']
 
+   const drawModeDescriptors = {}
+   drawModeDescriptors['freeform'] = { imgAsset:'freeform.png' }
+   drawModeDescriptors['curves'] = { imgAsset:'curves.png' }
+   drawModeDescriptors['lines'] = { imgAsset:'lines.png' }
+   drawModeDescriptors['circles'] = { imgAsset:'circles.png' }
+
    const notesLines = [
+      'left mouse: draw',
+      'right mouse: cancel (some modes)',
       'space : toggle draw mode',
       'u : undo',
       'x : clear',
-      'm : mirror around guides',
       'g : show/hide petal guides',
+      'm : mirror around guides',
       'h : show/hide half guides',
       'v : view (opens new winow)',
       '< >: halve/double guides',
-      'left mouse: draw',
-      'right mouse: cancel (some modes)',
       'ctrl(hold): snap (gray circles)',
    ]
 
@@ -98,10 +106,13 @@
 
    const snapManagerStripeWidth = 50;
    const snapPointRadius = 5;
+   const snapGuideDistance = 8;  // distance from guide where snap occurs
 
    const defaultStrokeWidth = 1;
    const minStrokeWidth = 1;
    const maxStrokeWidth = 4;
+
+   const defaultDrawMode = 'freeform'
 
    // order in which canvases are created
    let canvasOrder = [ drawingCanvasId, strokeBufferCanvasId, guidesCanvasId, scratchCanvasId, cursorCanvasId ]
@@ -168,6 +179,20 @@
          {
             graphics.push( GraphicsCommands.circle(currentSnapPoint.center.x, currentSnapPoint.center.y, currentSnapPoint.radius, '#DDDDDD'))
          });
+
+         if (cursorCurrentNearestLine !== null && mandala.drawGuides)
+         {
+            let drawCenter = getDrawingCenter()
+            lineLength = drawCenter.delta(0,0).length() // note:distance to corner
+
+
+            // Note: setting line width here. Don't care for now as this is last command added,
+            // but could lead to snafu's later!
+            // Note:can't remember if these mirror lines are unit length or not but eh,
+            // it'll be too long and thus clipped regardless which is fine
+            graphics.push( GraphicsCommands.setDrawParameter('lineWidth', snapGuideDistance) )
+            graphics.push( GraphicsCommands.line({x:0, y:0}, cursorCurrentNearestLine.scale(lineLength).p2))
+         }
 
          // graphics.push( GraphicsCommands.setDrawParameter('strokeStyle', '#AA0000') );
          // let i = 0;
@@ -329,6 +354,19 @@
          if (null === foundPoint)
          {
             foundPoint = tempSnapPointManager.getSnapPoint(point)
+         }
+
+         if (null === foundPoint && cursorCurrentNearestLine !== null && mandala.drawGuides)
+         {
+            // snap to guide?
+            if (cursorCurrentNearestLine.perpDistance(drawEngine.mouseCoords) < snapGuideDistance)
+            {
+               let originToCursor = new fnc2d.Line([0,0], drawEngine.mouseCoords)
+               let distanceToCursor = originToCursor.length()
+               let newLine = new fnc2d.Line(cursorCurrentNearestLine.p1, cursorCurrentNearestLine.p2)
+               newLine.normalizedEq().scaleEq(distanceToCursor).p2
+               foundPoint = new SnapPoint.SnapPoint(newLine.p2, 5, 'guide')
+            }
          }
       }
 
@@ -598,8 +636,6 @@
       if (mandala.mirrorGuides )
       {
          mandala.setMirrorLine( cursorAndGuide.closestGuide )
-         debugDiv.add('mirrorLine1', `m. line p1:${mirrorLine.p1.x},${mirrorLine.p1.y}`)
-         debugDiv.add('mirrorLine2', `m. line p2:${mirrorLine.p2.x},${mirrorLine.p2.y}`)
       }
 
       // TODO : this should be a function?
@@ -687,8 +723,6 @@
    {
       $('#drawModeSpanId').text(drawMode)
 
-      $('#drawModeMenuImgId')[0].src = `assets/${drawMode}.png`
-
       // $('#numPetalsSpanId').html(num)
       $('#drawModeSpanId').addClass('shown')
       if (numPetalsTimeoutFunc != 0)
@@ -706,9 +740,6 @@
       if ( false == mandala.mirrorGuides )
       {
          mandala.mirrorLine = null
-
-         debugDiv.remove('mirrorLine1')
-         debugDiv.remove('mirrorLine2')
       }
       else
       {
@@ -764,6 +795,21 @@
    }
 
    // --------------------------------------------------------------------------
+   function switchToNextDrawMode()
+   {
+      let i = 0
+      for (i = 0; i < drawModeNames.length; i += 1)
+      {
+         if (drawEngine.currentDrawMode.name === drawModeNames[i])
+         {
+            let nextModeIndex = (i + 1) % drawModeNames.length
+            onChangeDrawMode(drawModeNames[nextModeIndex], true)
+            break
+         }
+      }
+   }
+
+   // --------------------------------------------------------------------------
    function bodyOnKeyUp(event)
    {
       switch (event.originalEvent.key)
@@ -772,16 +818,7 @@
          activateSnapMode(false)
          break;
          case ' ':
-            let i = 0
-            for (i = 0; i < drawModeNames.length; i += 1)
-            {
-               if (drawEngine.currentDrawMode.name === drawModeNames[i])
-               {
-                  let nextModeIndex = (i + 1) % drawModeNames.length
-                  onChangeDrawMode(drawModeNames[nextModeIndex])
-                  break
-               }
-            }
+            switchToNextDrawMode()
          break;
          case 'x':
          case 'X':
@@ -924,13 +961,49 @@
    }
 
    // --------------------------------------------------------------------------
+   function buildDrawModeSelectMenu()
+   {
+      let $drawModeList = $('#drawModesSelectListId')
+
+      $drawModeList.css('padding', '0px')
+
+      for (var currentModeName of drawModeNames)
+      {
+         $newImg = $(`<img src="assets\\${drawModeDescriptors[currentModeName].imgAsset}"/>`)
+         $newImg.attr('width', '30px')
+         $newImg.attr('height', '30px')
+
+         $newImg.css('padding', '4px')
+
+         $newOption = $('<div></div>')
+         $newOption.css('display', 'inline-block')
+         $newOption.attr('title', currentModeName)
+
+         clickHandler = function()
+         {
+            onChangeDrawMode(this.modeName, true)
+         }.bind({modeName:currentModeName})
+
+         $newOption.on('click', clickHandler )
+
+         $newOption.append($newImg)
+
+         $drawModeList.append($newOption)
+      }
+   }
+
+   // --------------------------------------------------------------------------
    //function onBodyLoad()
    $(document).ready( function()
    {
       createCanvases({canvasOrder})
 
+      buildDrawModeSelectMenu();
+
       // disable right click menu
       $('#cursorCanvasId')[0].oncontextmenu = function(){return false;}
+      $('#drawModeMenuImgId')[0].oncontextmenu = function(){return false;}
+
       // TODO: set  opacities dynamically?
       $('#guidesCanvasId')[0].style.opacity = 0.5
       $('#scratchCanvasId')[0].style.opacity = 0.5
@@ -982,8 +1055,6 @@
          $('#notesConfigDivId').append($newSpan)
       })
 
-      // TODO: better way to do this?
-      $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
       // checkboxes
       $('#halfGuidesCheckboxId')[0].checked = mandala.drawHalfGuides
       $('#showGuidesCheckboxId')[0].checked = mandala.drawGuides
@@ -1013,6 +1084,8 @@
       // $('body').on('mousewheel DOMMouseScroll', onWheel)
 
       strokeWidth.set(defaultStrokeWidth)
+
+      onChangeDrawMode(defaultDrawMode, false)
 
       showConfigMenu(`notesConfigDivId`)
    }) // end document.ready
@@ -1083,21 +1156,32 @@
    }
 
    // --------------------------------------------------------------------------
-   function onChangeDrawMode(arg)
+   function onChangeDrawMode(arg, show)
    {
+      let newModeName = ''
+
       if ('object' === typeof arg)
       {
-         console.log(`change draw mode to: ${arg.target.value}`)
-         showDrawMode(arg.target.value)
-         drawEngine.setDrawMode(arg.target.value)
+         newModeName = arg.target.value
       }
       else if ('string' === typeof arg)
       {
-         console.log(`change draw mode to: ${arg}`)
-         showDrawMode(arg)
-         drawEngine.setDrawMode(arg)
+         newModeName = arg
       }
-      $('#drawModeSelectId')[0].value = drawEngine.currentDrawMode.name
+
+      if (newModeName !== '')
+      {
+         $('#drawModeMenuImgId')[0].src = `assets/${newModeName}.png`
+
+         console.log(`change draw mode to: ${newModeName}`)
+         $('#drawModesSelectListId div').attr('data-selected', "false")
+         $(`#drawModesSelectListId div[title=${newModeName}]`).attr('data-selected', "true")
+         if (show)
+         {
+            showDrawMode(newModeName)
+         }
+         drawEngine.setDrawMode(newModeName)
+      }
    }
 
    // --------------------------------------------------------------------------
@@ -1190,13 +1274,30 @@
       $('#colorJourneyActiveCheckboxId')[0].checked = colorJourney.active
    }
 
+   // --------------------------------------------------------------------------
+   function onDrawConfigClick(event)
+   {
+      if (isRightMouseButton(event))
+      {
+         switchToNextDrawMode()
+      }
+      else
+      {
+         showConfigMenu(`drawConfigDivId`)
+      }
+   }
+
    </script>
 
    <ul id="mainMenuId">
-      <!--- TODO : fix this lame ass hardwired initial image, should be driven by mode --->
-      <li><img id='drawModeMenuImgId' src='assets/freeform.png' width='25px' height='25px' onclick='showConfigMenu(`drawConfigDivId`)'/></li>
-      <li><img src='assets/flower.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)'/></li>
-      <li><img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)'/></li>
+      <li><img id='drawModeMenuImgId'
+               src='assets/freeform.png'
+               width='25px'
+               height='25px'
+               onMouseUp='onDrawConfigClick(event)'
+               title='draw config (right click here to cycle draw mode)'/></li>
+      <li><img src='assets/flower.png' width='25px' height='25px' onclick='showConfigMenu(`petalsConfigDivId`)' title='petals config'/></li>
+      <li><img src='assets/colors.png' width='25px' height='25px' onclick='showConfigMenu(`colorsConfigDivId`)' title='color journey config'/></li>
    </ul>
 
    <div id='petalsConfigDivId' class='menu_transparent configDivClass'>
@@ -1246,12 +1347,9 @@
       <span>drawing</span>
       <button class='dismissButton flatButton' onclick='dismissConfigMenus()'>X</button>
       <br><br>
-      <select id='drawModeSelectId' onchange='onChangeDrawMode(event)'>
-         <option value='freeform'>freeform</option>
-         <option value='curves'>curves</option>
-         <option value='lines'>lines</option>
-         <option value='circles'>circles</option>
-      </select>
+      <ul id='drawModesSelectListId'>
+      </ul>
+
       <br>
       <br>
       <span>width: </span><span id='strokeWidthSpanId'></span>

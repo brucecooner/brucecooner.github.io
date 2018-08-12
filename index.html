@@ -23,8 +23,6 @@
          <!-- --------------------------------------------------------------- -->
          function onBodyLoad()
          {
-            buildWorkHistory()
-
             photosStart(handleSomePhotos)
 
             // testing...
@@ -78,27 +76,6 @@
 
         }
 
-      // -------------------------------------------------------------------
-      function buildWorkHistory()
-      {
-         // var workHistoryDiv = document.getElementById("workHistoryDivId")
-         //
-         // workExperience.forEach( function(currentElement)
-         // {
-         //    var currentDiv = document.createElement("div")
-         //    var timespanEl = document.createElement("p")
-         //    timespanEl.innerHTML = `From ${currentElement.start} until ${currentElement.end}`
-         //
-         //    currentDiv.appendChild(timespanEl)
-         //
-         //    var titleEl = document.createElement("p")
-         //    titleEl.innerHTML = `Title: ${currentElement.title}`
-         //    currentDiv.appendChild(titleEl)
-         //
-         //    workHistoryDiv.appendChild(currentDiv)
-         // })
-      }
-
       // --------------------------------------------------------------------
       function addPhotoHighlight(event)
       {
@@ -126,6 +103,18 @@
             // console.log('YES OPEN')
          }
       }
+
+		// ----------------------------------------------------------------------
+		// won't allow default action on event if specified column is not open
+		function preventDefaultIfColumnNotInFocus(event, requiredColumnId)
+		{
+			requiredColumnEl = $(`#${requiredColumnId}`)[0];
+
+			if ( false == requiredColumnEl.classList.contains('flexColumnFocus') )
+			{
+				event.preventDefault();
+			}
+		}
 
       // --------------------------------------------------------------------
       function handleSomePhotos(photosArray)
@@ -189,11 +178,13 @@
             getMorePhotos()
          }
       }
+
     </script>
 
     <div class="mainContainer">
         <header class="mainHeader">
           <h1>Bruce Cooner Dot Com (v0.1)</h1>
+			 <span>(click a column to see what I'm up to)</span>
           <!-- <div class='socialIcons'>
             <a href="http://www.flickr.com/photos/woodbits/" target="_blank" title="visit my photo page"><img src="https://s.yimg.com/pw/images/goodies/black-flickr.png" width="56" height="26" alt=""></a>
          </div> -->
@@ -229,9 +220,24 @@
                 <div class="craftBackgroundDivClass">
                 </div>
                 <div class="craftForegroundDivClass">
-                   <span>Still under construction here, but you can check out my </span>
-                   <a href="http://shoholastar.etsy.com/" target="_blank">Etsy shop</a>
-                   <span> to see (and purchase if you like) some of the wooden jewelry I've made.<span>
+						<div>
+                   <h3>Click the wooden cactus to see my etsy shop filled with unique, desert inspired jewelry and crafts</h3>
+						 	<a	href="http://leaningcactus.etsy.com"
+								onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
+								target="_blank">
+								<img  width="200" src="https://i.etsystatic.com/isla/520f1a/30317740/isla_500x500.30317740_rhwhhobq.jpg?version=0">
+							</a>
+						</div>
+						<hr>
+						<div>
+						<h3>My own design of a laser cut model of the LZ 127 Graf Zeppelin.</h3>
+						<div>(click the picture for plans and build instructions)</div>
+						<a	href="LZ127/LZ127-notes.html"
+							onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
+							target="_blank">
+								<img src="LZ127/LZ127-completed.jpg" width="500">
+						</a>
+						</div>
          </div>
         </div>
     </div>

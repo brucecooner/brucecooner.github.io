@@ -1,0 +1,1031 @@
+<html>
+
+<head>
+<title>Lots o' Circles</title>
+
+<!--
+TODO:
+
+BUGS:
+* seeing "undefined" in a few places in the DOM
+	-opacity in some svg layers
+* layers created while stroke is disabled don't have background color
+* layers created while stroke is disabled don't show color when it's activated
+* clone option should be disabled if there are no layers
+
+* Mandala
+* OVERALL rotation?
+* render order iterator?
+* sorta need hidden UUID for layer keys instead of relying on name
+* presets (seed of life, etc.)
+
+* LAYERS
+* layer-layers
+* split out layer types (eventually)
+* inner radius
+*	-needs to be constrained so always < outer_radius!
+*	-and validated as such
+* end rotation
+* reverse (if !mirrored)
+* make sine wave point gen start at rot=0
+* value transitions
+*	-want a general transition class for this?
+
+GENERAL EDITOR:
+* amplitude is not syncing on layer change
+* window resize handling
+* zoom in/out?
+* UNDO
+* globals into a scope (named editor maybe?)
+* config
+*	-restore on startup
+* 	-BRING BACK THE COLOR JOURNEY!
+* assign proper z-indices
+* only trail edited layer?
+* styles to dedicated css
+* "guide" lines
+* save multiples
+
+LAYER EDIT MENU
+* dismissable editor?
+* cleaner layer parameters editor
+*	-broken into sections
+* "wheel capture" -> wheel continues to edit last touched control over main window
+
+LAYER MENU...MENU
+* icons would be nice
+* expandable layer menu?
+* layer visibility? (control alpha probably)
+* ensure correct sync between render order - layer list order?
+* move layer up/down
+* configurable layer names
+	-will users even care about layer names?
+	-is there some other way to 'name' or indicate layers?
+* better representation of layers in list
+	-lack of stroke => ???
+
+DEV OPS:
+* some sort of bundling with module support?
+
+DOWNLOAD:
+* 	-de-grouped output mode?
+*		-will probably have to cascade transforms!
+* 	-inkscape compatible layer support
+
+* TESTING???
+* is underway at least
+* better integration of layer integrity testing with mandala integrity test
+* testing/validation that can optionally throw exceptions?
+* test all interface functions, sort-of-e2e
+
+RENDERING
+* rendered layer caching
+
+COLORS
+* all around better color handling
+*	- ???
+* color picker?
+	- better placement, feedback?
+
+MODAL NEEDS
+* dismissal callback?
+
+SVG
+* more primitives support
+	- lines
+	- layers
+
+WAY LATER...
+* animation
+-->
+
+<style>
+body {
+    width:100%;
+    height:100%;
+	 margin: 0px 0px 0px 0px;
+	 position: relative;
+	 font-family:sans-serif;
+	 background-color:hsl(0,0%,93%)
+    /* background-color:blue; */
+}
+
+.menuBarClass {
+	position:fixed;
+	float:right;
+	right:0px;
+	top:0px;
+	border-width:0px 0px 2px 2px;
+	border-color:black;
+	border-style:solid;
+	border-bottom-left-radius: 3px;
+	background-color:lightgray;
+	padding: 2px;
+	z-index:10;
+}
+
+.modal {
+	width:50%;
+	height:50%;
+	color:white;
+	background-color:rgb(0,0,0);
+	position:fixed;
+	left:0px;
+	top:0px;
+}
+
+#colorPickId {
+	background-color:black;
+}
+
+.pickColorButton {
+	display:inline;
+	border-radius:5px;
+}
+
+/* disable layer edit controls if no layers */
+body[data-layer-count="0"] #menuBarId {
+	display:none;
+}
+
+svg {
+	position:absolute;
+	left:0px;
+	right:0px;
+}
+
+.fading {
+	opacity: 0;
+	transition: opacity 3.5s ease-out;
+}
+/* ------ */
+
+/* if only one circle/point in current layer, disable inner radius control */
+body[data-layer-points="1"] #innerRadiusControlRowId {
+	display:none;
+}
+
+.hintTextClass {
+	position:fixed;
+	left:0px;
+	bottom:0px;
+	margin:5px;
+}
+
+</style>
+
+<script type="application/javascript" src="libs/jquery-3.3.1.js"></script>
+<script type="application/javascript" src="libs/utility.js"></script>
+<script type="application/javascript" src="libs/fnc2d.js"></script>
+<script type="application/javascript" src="libs/my2d.js"></script>
+<script type="application/javascript" src="libs/myRangeInput.js"></script>
+<script type="application/javascript" src="libs/WatchedValue.js"></script>
+<script type="application/javascript" src="libs/modalize.js"></script>
+<script type="application/javascript" src="libs/popupper.js"></script>
+<script type="application/javascript" src="libs/LogChannels.js"></script>
+<script type="application/javascript" src="libs/MiniTester.js"></script>
+<script type="application/javascript" src="libs/MiniValidator.js"></script>
+<script type="application/javascript" src="svgee.js"></script>
+<script type="application/javascript" src="fncColorPicker.js"></script>
+
+<!-- MODEL -->
+<script type="application/javascript" src="Mandala/BasePointsGenerator.js"></script>
+<script type="application/javascript" src="Mandala/MandalaLayer.js"></script>
+<script type="application/javascript" src="Mandala/Mandala.js"></script>
+<script type="application/javascript" src="Mandala/Mandala_tests.js"></script>
+<script type="application/javascript" src="Mandala/MandalaSVGRenderer.js"></script>
+
+
+<script type="application/javascript" src="Action.js"></script>
+
+
+ <!-- UI -->
+ <link rel="stylesheet" type="text/css" href="ui/LayerMenu.css">
+ <script type="application/javascript" src="ui/LayerMenu.js"></script>
+
+<script type="application/javascript" src="ui/save_dialog.js"></script>
+
+<script type="application/javascript">
+
+// ----- EARLY INITS -----
+LogChannels.CaptureConsoleLog();
+// LogChannels.EnableChannel(popupper_channel_name, false);
+LogChannels.EnableChannel(LayerMenu.log_channel, true);
+
+var Actions = ActionInit();
+LogChannels.EnableChannel(Actions.log_channel, false);
+
+// ----- GLOBALS -----
+// TODO: scope all this stuff
+var app_config = {
+	restore_on_startup: false,
+};
+
+var disabled_color_string = "hsl(0,0%, 50%)";
+var main_log_channel = "index";
+var edit_log_channel = "edit";
+
+var MandalaClass = initMandalaClass();
+var mandala = null;
+var mandala_svg_renderer = null;
+
+var render_trails = true;
+// var current_layer_name = "";
+
+var view_width;
+var view_height;
+
+var layer_menu = null;
+
+const storage_key_mandala = "mandala";
+
+// testing stuff
+var mandala_integrity_check_after_queue_processing = true;
+
+// ---- COLOR ----
+var color_picker = null;
+var color_picker_dialog = null;
+
+// if not picking stroke, then picking fill
+// yeah I know this is lame and will get fixed
+var picking_stroke_color = true;
+
+// ---- SAVE ----
+var save_dialog = null;
+
+var current_stroke_enabled = WatchedValue.Create(	true,
+		[function(value)	{	console.log(edit_log_channel, "stroke enabled = " + value);
+									var color_string = value ? getColorString(current_stroke_color.get()) : "none";
+									Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																							[layer_menu.editing_layer],
+																							{value:color_string, layer_property:"stroke"}));
+									syncLayerEditStrokeControls(value, getColorString(current_stroke_color.get()));
+									render();
+									}]);
+
+var current_fill_enabled = WatchedValue.Create(	false,
+		[function(value)	{	console.log(edit_log_channel, "fill enabled = " + value);
+									var color_string = value ? getColorString(current_fill_color.get()) : "none";
+									Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																								[layer_menu.editing_layer],
+																								{value:color_string, layer_property:"fill"}));
+									syncLayerEditFillControls(value, getColorString(current_fill_color.get()));
+									render();
+									}]);
+
+
+var current_stroke_color = WatchedValue.Create(	{hue:0, saturation:100, lightness:50},
+		[function(value) {	console.log(edit_log_channel, "current_stroke_color = " + JSON.stringify(value));
+									getCurrentLayer().stroke = getColorString(value);
+									layer_menu.setEditingLayerColor(getColorString(current_stroke_color.get()));
+									$("#strokeColorPickButtonId").css({"background-color":getColorString(value)});
+									render();
+									}]);
+
+var current_fill_color = WatchedValue.Create(	{hue:100, saturation:100, lightness:50},
+		[function(value) {	console.log(edit_log_channel, "current_fill_color = " + JSON.stringify(value));
+									getCurrentLayer().fill = getColorString(value);
+									$("#fillColorPickButtonId").css({"background-color":getColorString(value)});
+									render();
+									}]);
+
+// --------------------------------------------------------
+// sets all attributes used on body element
+function setDataAttributesOnBody()
+{
+	$("body").attr("data-layer-count", mandala.getLayerCount());
+	$("body").attr("data-layer-points", getCurrentLayer().number_of_points);
+}
+
+// --------------------------------------------------------
+// enables/disables controls based on state of current layer
+function enableDisableLayerEditControls(layer)
+{
+	// if only one point in petal...
+	// $("#mirrorPointsChkId").prop("disabled", ( layer.number_of_points == 1 || layer.amplitude == 0));
+	// $("#petalWavesRangeId").prop("disabled", ( layer.number_of_points == 1 || layer.amplitude == 0));
+
+	// -----
+	// handled with styling now
+	// $("#innerRadiusRangeId").prop("disabled", layer.number_of_points == 1);
+
+	// -----
+	// MUST HAVE one of either stroke or fill enabled at all times
+	// prevents user from turning both off
+
+	// if fill is off, disable stroke toggling
+	var stroke_chk_enabled = true;
+	if ( false === layer.fillOn )
+	{
+		stroke_chk_enabled = false;
+	}
+	$("#strokeEnabledChkId").prop("disabled", !stroke_chk_enabled );
+
+	// if stroke is off, disable fill toggling
+	var fill_chk_enabled = true;
+	if ( false === layer.strokeOn )
+	{
+		fill_chk_enabled = false;
+	}
+	$("#fillEnabledChkId").prop("disabled", !fill_chk_enabled);
+}
+
+// ----------------------------------------------------------------------------
+function syncLayerEditStrokeControls(stroke_enabled, stroke_color_string)
+{
+	$("#strokeEnabledChkId").prop("checked", stroke_enabled);
+	$("#strokeColorPickButtonId").prop("disabled", !stroke_enabled);
+	$("#strokeColorPickButtonId").css({"background-color":stroke_enabled ? stroke_color_string : disabled_color_string});
+};
+
+// ----------------------------------------------------------------------------
+function syncLayerEditFillControls(fill_enabled, fill_color_string)
+{
+	$("#fillEnabledChkId").prop("checked", fill_enabled);
+	$("#fillColorPickButtonId").prop("disabled", !fill_enabled);
+	$("#fillColorPickButtonId").css({"background-color":fill_enabled ? fill_color_string : disabled_color_string });
+};
+
+// --------------------------------------------------------
+function syncLayerEditInputs()
+{
+	var current_layer = getCurrentLayer();
+
+	$("#numSpokesId")[0].value = current_layer.number_of_spokes;
+	$("#outerRadiusRangeId")[0].value = current_layer.outer_radius;
+	$("#innerRadiusRangeId")[0].value = current_layer.inner_radius;
+	$("#spokeRotOffsetId")[0].value = current_layer.spoke_rot_offset;
+	$("#circleRadiusId")[0].value = current_layer.radius;
+	$("#strokeWidthId")[0].value = current_layer.stroke_width;
+	$("#numPointsId")[0].value = current_layer.number_of_points;
+	// $("#petalWavesRangeId")[0].value = current_layer.sine_length;
+	// $("#spokeEndRotId")[0].value = current_layer.spoke_end_rot;
+	// $("#mirrorPointsChkId").prop("checked", current_layer.mirror);
+
+	syncLayerEditStrokeControls(current_layer.strokeOn, current_layer.stroke);
+	syncLayerEditFillControls(current_layer.fillOn, current_layer.fill);
+
+	enableDisableLayerEditControls(current_layer);
+};
+
+// ----------------------------------------------------------------------------
+// TODO: this should be in the layers menu
+function setCurrentLayer(layer_name)
+{
+	var layer = mandala.getLayer(layer_name);
+
+	$(`.layerList_Item`).attr("data-active-layer", false);
+
+	// current_layer_name = layer_name;
+	console.log("setting layer to " + layer_name);
+
+	$(`.layerList_Item[data-layer-name=${layer_name}]`).attr("data-active-layer", true);
+
+	syncLayerEditInputs();
+}
+
+// ----------------------------------------------------------------------------
+function getCurrentLayer()
+{
+	return mandala.getLayer(layer_menu.editing_layer);
+}
+
+// --------------------------------------------------------------------
+// returns: string "hsl(n,n%,n%)"
+function getColorString(color)
+{
+	return `hsl(${color.hue},${color.saturation}%,${color.lightness}%)`;
+}
+
+// --------------------------------------------------------------------
+// receives: hsl:{hue:number, saturation:number, lightness:number}
+function setCurrentColor(hsl)
+{
+	// todo: fill out hsl? 
+	current_stroke_color.set(hsl);
+}
+
+// --------------------------------------------------------------------
+function highlightLayer(layer_name)
+{
+	console.log(`highlighting layer: "${layer_name}`);
+
+	highlighted_layer = layer_name;
+
+	if (layer_name.length == 0)
+	{
+		$(`#mySVG g`).attr("opacity", "1.0");
+	}
+	else
+	{
+		$("#mySVG g").each( function(index) 
+		{ 
+			var cur_layer = $(this).attr("data-layer-name")
+			console.log(cur_layer);
+
+			var cur_opacity = cur_layer === highlighted_layer ? 1.0 : 0.25;
+
+			$(this).attr("opacity", cur_opacity);
+		});
+	}
+}
+
+// --------------------------------------------------------------------
+function handleAction_newDocument(action)
+{
+	console.log(main_log_channel, "handleAction_newDocument()"); 
+
+	mandala.deleteAllLayers();
+	layer_menu.sync();
+
+	Actions.queueAction(new Actions.Action(Actions.ActionType.add_layer, []));
+	Actions.queueAction(new Actions.Action(Actions.ActionType.render, []));
+}
+
+// --------------------------------------------------------------------
+function handleAction_addLayer(action)
+{
+	console.log(main_log_channel, "handleAction_addLayer()"); 
+
+	// model
+	// TODO: FUNCTIONALIZE THIS
+	var stroke_color_string = current_stroke_enabled.get() ? getColorString(current_stroke_color.get()) : "none";
+	var fill_color_string = current_fill_enabled.get() ? getColorString(current_fill_color.get()) : "none";
+	var new_layer = mandala.addCirclesLayer({stroke:stroke_color_string, fill:fill_color_string});
+
+	// interface
+	layer_menu.addLayer(new_layer.name);
+	layer_menu.setEditingLayer(new_layer.name);
+
+	setDataAttributesOnBody();
+
+	render();
+
+	return new_layer;
+};
+
+// --------------------------------------------------------------------
+function handleAction_cloneLayer(action)
+{
+	console.log(main_log_channel, `handleAction_cloneLayer(${action.layers[0]})`); 
+
+	var new_layer_name = mandala.cloneLayer(action.layers[0]);
+	layer_menu.sync();
+	layer_menu.setEditingLayer(new_layer_name);
+
+	Actions.queueAction(new Actions.Action(Actions.ActionType.render));
+}
+
+// --------------------------------------------------------------------
+function handleAction_deleteLayer(action)
+{
+	console.log(main_log_channel, `handleAction_deleteLayer()`);
+
+	// model
+	new_edit_layer_name = mandala.deleteLayer(action.layers[0]);
+
+	if (new_edit_layer_name !== "")
+	{
+		layer_menu.setEditingLayer(new_edit_layer_name);
+	}
+	else
+	{
+		console.log(main_log_channel, "TODO: handle deletion leaving no layer to select");
+	}
+
+	// interface
+	layer_menu.removeLayer(action.layers[0]);
+
+	setDataAttributesOnBody();
+
+	render();
+}
+
+// --------------------------------------------------------------------
+function setLayerProperty(property_key, layers, value )
+{
+	console.log(main_log_channel, `setLayerProp(${layers[0]}, ${property_key}, ${value})`);
+
+	// model
+	// mandala.getLayer(layers[0])[property_key] = value;
+	mandala.getLayer(layers[0]).setProperty(property_key, value);
+
+	enableDisableLayerEditControls(getCurrentLayer());
+
+	setDataAttributesOnBody();
+
+	render();
+};
+
+// --------------------------------------------------------------------
+function handleAction_setEditingLayers(action)
+{
+	console.log(main_log_channel, `setEditingLayers()`);
+	console.log(main_log_channel, action.layers);
+
+	setDataAttributesOnBody();
+	syncLayerEditInputs();
+}
+
+// --------------------------------------------------------------------
+function handleAction_highlightLayer(action)
+{
+	console.log(main_log_channel, `highlightLayer(${action.layers[0]})`);
+
+	if (action.layers.length == 0)
+	{
+		$("g").attr("opacity", 1);
+	}
+	else
+	{
+		$("g[data-layer-name]").attr("opacity", 0.25);
+		$(`g[data-layer-name=${action.layers[0]}]`).attr("opacity", 1);
+	}
+}
+
+// --------------------------------------------------------------------
+function handleAction_save(action)
+{
+	console.log(main_log_channel, `save()`);
+
+	var mandala_json = mandala.toJSON();
+	localStorage.setItem(storage_key_mandala, mandala_json);
+}
+
+// --------------------------------------------------------------------
+function handleAction_restore(action)
+{	
+	console.log(main_log_channel, `restore()`);
+
+	var mandala_json = localStorage.getItem(storage_key_mandala);
+
+	if (null === mandala_json)
+	{
+		console.log(action_log_channel, `ERROR: no mandala object in localStorage`);
+	}
+	else
+	{
+		var mandala_obj = JSON.parse(mandala_json);
+		mandala.fromJSON(mandala_obj);
+		if (mandala.getLayerCount() > 0 )
+		{
+			layer_menu.sync();
+			var layer = mandala.getLayerByIndex(0);
+			layer_menu.setEditingLayer(layer.name);
+		}
+		$("body").attr("data-layer-count", mandala.getLayerCount());
+
+		render();
+	}
+}
+
+// --------------------------------------------------------------------
+function handleAction_render(action)
+{
+	console.log(main_log_channel, "render()");
+	render();
+}
+
+// --------------------------------------------------------------------
+function handleAction_download(action)
+{
+	if (svg_blob_url)
+	{
+		window.URL.revokeObjectURL(svg_blob_url);
+	}
+	svg_blob_url = show_svg();
+
+	save_dialog.start(svg_blob_url);
+}
+
+// --------------------------------------------------------------------
+function queue_processing_done_callback()
+{
+	// console.log(main_log_channel, "queue_processing_done_callback()");
+
+	if (mandala_integrity_check_after_queue_processing)
+	{
+		mandala.testIntegrity();
+	}
+}
+
+// --------------------------------------------------------------------
+var action_map = {};
+
+action_map[Actions.ActionType.add_layer]					= handleAction_addLayer;
+action_map[Actions.ActionType.set_layer_property]		= (action) => { setLayerProperty(action.layer_property, action.layers, action.value); }
+action_map[Actions.ActionType.set_editing_layers]		= handleAction_setEditingLayers;
+action_map[Actions.ActionType.delete_layer]				= handleAction_deleteLayer;
+action_map[Actions.ActionType.highlight_layer]			= handleAction_highlightLayer;
+action_map[Actions.ActionType.save]							= handleAction_save;
+action_map[Actions.ActionType.restore]						= handleAction_restore;
+action_map[Actions.ActionType.new_document]				= handleAction_newDocument;
+action_map[Actions.ActionType.render]						= handleAction_render;
+action_map[Actions.ActionType.clone_layer]				= handleAction_cloneLayer;
+action_map[Actions.ActionType.download]					= handleAction_download;
+
+Actions.setConfig({action_map:action_map, queue_processing_done_callback:queue_processing_done_callback});
+
+// --------------------------------------------------------------------
+// --------------------------------------------------------------------
+// --------------------------------------------------------------------
+$(document).ready( function()
+{
+	// ---- DATA INIT ----
+	mandala = new MandalaClass();
+	mandala_svg_renderer = new MandalaSVGRenderer.MandalaSVGRenderer(mandala, {width:view_width, height:view_width});
+
+	// gain access to layer validators to get range extents
+	var temp_layer = new mandala.LayerClass();
+	var ranges = temp_layer.LayerValidators;
+	var defaults = temp_layer.defaultLayerParameters;
+
+	 // --- DUCTWORK ---
+	 // TODO: move editor elements to their own class/component
+    // num circles
+		let numSpokesRangeCallback = myRangeInput.createRange({id:'numSpokesId',
+			containerId:'numSpokesRangeContainer',
+			onInputHandler:(value) => { 
+				Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																		[layer_menu.editing_layer],
+																		{value:value, layer_property:"number_of_spokes"}));
+			}, 
+			initialValue:defaults.number_of_spokes,
+			step:1, wheelStep:1,
+			min:ranges.number_of_spokes.min, max:ranges.number_of_spokes.max,
+			});
+
+	// num points
+	let numPointsRangeCallback = myRangeInput.createRange({id:'numPointsId',
+			containerId:'numPointsRangeContainer',
+			onInputHandler:(value) => {
+				Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	  [layer_menu.editing_layer],
+																	  {value:value, layer_property:"number_of_points"}));
+			},
+			initialValue:defaults.number_of_points,
+			step:1, wheelStep:1,
+			min:ranges.number_of_points.min, max:ranges.number_of_points.max });
+
+	// spoke end rotation
+	/*
+	let spokeEndRotRangeCallback = myRangeInput.createRange({id:'spokeEndRotId',
+			containerId:'spokeEndRotRangeContainer',
+			onInputHandler:(value) => {
+				Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	  [layer_menu.editing_layer],
+																	  {value:value, layer_property:"spoke_end_rot"}));
+			},
+			initialValue:0,
+			wheelStep:Math.PI / 180, // 1 degree
+			min:-Math.PI, max:Math.PI, step:0.01});  
+	*/
+
+	 // outer radius
+    let outerRadiusRangeCallback = myRangeInput.createRange({id:'outerRadiusRangeId',
+        containerId:'outerRadiusRangeContainer',
+        onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer],
+																	{value:value, layer_property:"outer_radius"}));
+		  },
+		  initialValue:defaults.outer_radius,
+		  step:1, wheelStep:1,
+        min:ranges.outer_radius.min, max:ranges.outer_radius.max })
+
+	 // inner radius
+    let innerRadiusRangeCallback = myRangeInput.createRange({id:'innerRadiusRangeId',
+        containerId:'innerRadiusRangeContainer',
+        onInputHandler:(value) => {
+			  var new_inner_radius = getCurrentLayer().outer_radius * value;
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer],
+																	{value:new_inner_radius, layer_property:"inner_radius"}));
+		  },
+		//   initialValue:defaults.inner_radius,
+		//   step:1, wheelStep:1,
+      //   min:ranges.inner_radius.min, max:ranges.inner_radius.max })
+		  initialValue:0.0,
+		  step:0.1, wheelStep:0.1,
+        min:0.0, max:1.0 })
+
+    // spoke_rot_offset
+    let spokeRotOffsetRangeCallback = myRangeInput.createRange({id:'spokeRotOffsetId',
+        containerId:'spokeRotOffsetRangeContainer', 
+        onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer], 
+																	{value:value, layer_property:"spoke_rot_offset"}));
+		  },
+		  initialValue:defaults.spoke_rot_offset,
+		  step:Math.PI / 180, wheelStep:Math.PI / 180,
+        min:ranges.spoke_rot_offset.min, max:ranges.spoke_rot_offset.max })
+
+    // radius
+    let circleRadiusRangeCallback = myRangeInput.createRange({id:'circleRadiusId',
+        containerId:'circleRadiusRangeContainer',
+        onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer], 
+																	{value:value, layer_property:"radius"}));
+		  },
+        initialValue:defaults.radius,
+		  step:1, wheelStep:1,
+        min:ranges.radius.min, max:ranges.radius.max});
+
+    // stroke_width
+    let strokeWidthRangeCallback = myRangeInput.createRange({id:'strokeWidthId',
+        containerId:'strokeWidthRangeContainer',
+        onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer],
+																	{value:value, layer_property:"stroke_width"}));
+		  },
+		  initialValue:defaults.stroke_width,
+		  step:1, wheelStep:1,
+        min:ranges.stroke_width.min, max:ranges.stroke_width.max });
+/*	 
+	// wavesRangeContainer
+	let sineWavesRangeCallback = myRangeInput.createRange({id:"petalWavesRangeId",
+		  containerId:"wavesRangeContainer",
+		  onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer],
+																	{value:value, layer_property:"sine_length"}));
+		  },
+		  initialValue:defaults.sine_length,
+		  step:Math.PI / 180, wheelStep:0.01, // 1 degree-ish
+		  min:ranges.sine_length.min, max:ranges.sine_length.max });
+
+    // amplitude 
+    let amplitudeRangeCallback = myRangeInput.createRange({id:'amplitudeId',
+        containerId:'amplitudeRangeContainer',
+        onInputHandler:(value) => {
+			Actions.queueAction(new Actions.Action(	Actions.ActionType.set_layer_property,
+																	[layer_menu.editing_layer],
+																	{value:value, layer_property:"amplitude"}));
+		  },
+		  initialValue:0,
+		  step:1, wheelStep:0.5,
+        min:ranges.amplitude.min, max:ranges.amplitude.max });
+*/
+
+	// --- UI INIT ---
+	color_picker = new fncColorPicker.Create({color_picked_handler:onColorPicked, size:250, container_div_id:"colorpick", hue:0, rot_offset:-Math.PI * 0.5});
+	color_picker_dialog = new modalize.Create($("body"), color_picker.$container_div, "colorpick_cover", {left:50,top:20});
+	save_dialog = new SaveDialog.Create();
+
+	// --- LAYER MENU ---
+	layer_menu = new LayerMenu(mandala, Actions);
+	layer_menu.generateMenu();
+	$("body").append(layer_menu.$menu_content);
+
+	// note that model initialization should sync controls to whatever goes into model
+
+	// var new_layer = handleAction_addLayer({});
+	// restore?
+	var mandala_json = localStorage.getItem(storage_key_mandala);
+	if (null !== mandala_json && app_config.restore_on_startup)
+	{
+		Actions.queueAction(new Actions.Action(Actions.ActionType.restore, []));
+	}
+	else
+	{
+		$("#restoreButtonId").prop("disabled", true);
+		Actions.queueAction(new Actions.Action(Actions.ActionType.add_layer, []));
+	}
+
+	// -----
+	$("[data-hint]").mouseenter( (elem) => {
+		$("#hintTextId").text($(elem.target).attr('data-hint'));
+	});
+
+	$("[data-hint]").mouseleave( (elem) => {
+		$("#hintTextId").text("");
+	});
+
+	render();
+});
+
+// --------------------------------------------------------------------
+function onBodyLoad()
+{
+    view_width = window.innerWidth;
+    view_height = window.innerHeight;
+};
+
+/*
+// --------------------------------------------------------------------
+function onWheel()
+{
+};
+
+// --------------------------------------------------------------------
+function logStats()
+{
+   //  console.log( "viewbox width: " + $("#mySVG")[0].viewBox.baseVal.width );
+   //  console.log( "viewbox height: " + $("#mySVG")[0].viewBox.baseVal.height );
+}
+
+// --------------------------------------------------------------------
+function zoomIn()
+{
+    $("#mySVG")[0].viewBox.baseVal.width -= 10;
+    $("#mySVG")[0].viewBox.baseVal.height -= 10;
+
+    logStats();
+}
+
+// --------------------------------------------------------------------
+function zoomOut()
+{
+    $("#mySVG")[0].viewBox.baseVal.width += 10;
+    $("#mySVG")[0].viewBox.baseVal.height += 10;
+
+    logStats();
+}
+*/
+
+// --------------------------------------------------------------------
+function show_svg() {
+    var svg = document.getElementById("mySVG");
+    var serializer = new XMLSerializer();
+    var svg_blob = new Blob([serializer.serializeToString(svg)],
+                            {'type': "image/svg+xml"});
+    var object_url = URL.createObjectURL(svg_blob);
+
+    // later... revokeObjectURL();
+	 // var svg_win = window.open(url, "svg_win");
+	 return object_url;
+}
+
+var trail_index = 0;
+var trail = [];
+
+// --------------------------------------------------------------------
+function render()
+{
+	if (render_trails)
+	{
+		var $last_SVG = $("#mySVG");
+		if ($last_SVG.length)
+		{
+			// $("#mySVG").addClass("fading");
+			$last_SVG.attr("id", `trail_${trail_index}`);
+			$last_SVG.addClass("trail");
+			trail_index += 1;
+			$last_SVG.fadeOut( 250, () => {$last_SVG.remove(); } );
+		}
+	}
+
+	mandala.preRender();
+	var svg_elem = mandala_svg_renderer.render();
+	 $("body").append(svg_elem);
+}
+
+
+// TODO: move upward
+var svg_blob_url = null;
+
+var svg_file_version = 1;
+
+// ----------------------------------------------------------------------------
+// save state in local storage
+function onSave()
+{
+	console.log(main_log_channel, "onSave()");
+	Actions.queueAction(new Actions.Action(Actions.ActionType.save, []));
+}
+
+// ----------------------------------------------------------------------------
+function onRestore()
+{
+	console.log(main_log_channel, "onRestore()");
+	Actions.queueAction(new Actions.Action(Actions.ActionType.restore, []));
+}
+
+// ----------------------------------------------------------------------------
+function onDownload()
+{
+	// TODO: move to function?
+	if (svg_blob_url)
+	{
+		window.URL.revokeObjectURL(svg_blob_url);
+	}
+	svg_blob_url = show_svg();
+
+	save_dialog.start(svg_blob_url);
+}
+
+// ----------------------------------------------------------------------------
+function onAddLayer()
+{
+	var new_layer = addLayer();
+	setCurrentLayer(new_layer.name);
+	syncLayerEditInputs();
+	render();
+}
+
+// ----------------------------------------------------------------------------
+function onPickColor(is_picking_stroke_color)
+{
+	picking_stroke_color = is_picking_stroke_color;
+
+	color_picker_dialog.start();
+}
+
+// ----------------------------------------------------------------------------
+// callback from picker dialog
+function onColorPicked(color)
+{
+	console.log(edit_log_channel, `onColorPicked:${JSON.stringify(color)}`)
+	color_picker_dialog.dismiss();
+
+	// picking fill or stroke?
+	// oh man, gross
+	if (picking_stroke_color)
+	{
+		current_stroke_color.set(color);
+	}
+	else
+	{
+		current_fill_color.set(color);
+	}
+
+	render();
+}
+
+// ----------------------------------------------------------------------------
+function onStrokeEnabledChange()
+{
+	current_stroke_enabled.set($("#strokeEnabledChkId").prop("checked"));
+}
+
+// ----------------------------------------------------------------------------
+function onFillEnabledChange()
+{
+	current_fill_enabled.set($("#fillEnabledChkId").prop("checked"));
+}
+
+// ----------------------------------------------------------------------------
+function onMirrorChange()
+{
+	Actions.queueAction(	new Actions.Action(Actions.ActionType.set_layer_property, 
+								[layer_menu.editing_layer],
+								{ layer_property:"mirror", value:$("#mirrorPointsChkId").prop("checked") }));
+}
+
+</script>
+
+</head>
+
+<!-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --  -->
+<body data-layer-count="0" onload="onBodyLoad()">
+
+<div class="menuBarClass" id="menuBarId">
+	<table>
+		<!-- layer parameters -->
+		<tr><td>rays</td><td id="numSpokesRangeContainer" data-hint="number of rays"></td></tr>
+		<!-- base parameters -->
+		<tr><td>num</td><td id="numPointsRangeContainer" data-hint="number of circles along ray"></td></tr>
+		<tr><td>rot</td><td id="spokeRotOffsetRangeContainer" data-hint="rotation of rays"></td></tr>
+		<tr><td>radius</td><td id="outerRadiusRangeContainer" data-hint="outer radius"></td></tr>
+		<tr id="innerRadiusControlRowId" data-hint="starting radius"><td>inner</td><td id="innerRadiusRangeContainer"></td></tr>
+
+
+		<!-- 
+		<tr><td>amp</td><td id="amplitudeRangeContainer"></td></tr>
+		<tr><td>wavy</td><td id="wavesRangeContainer"></td></tr>
+		<tr><td>mirror</td><td><input id="mirrorPointsChkId" onChange="onMirrorChange();" type="checkbox"></td></tr> 
+		-->
+
+		<tr data-hint="size of circles along ray"><td>size</td><td id="circleRadiusRangeContainer"></td></tr>
+
+		<!-- style parameters -->
+		<tr data-hint="stroke width"><td>stroke</td><td id="strokeWidthRangeContainer"></td></tr>
+
+		<!-- ??? -->
+		<!-- <tr><td>end rot</td><td id="spokeEndRotRangeContainer"></td></tr> -->
+	</table>
+	 <input type="checkbox" id="strokeEnabledChkId" onChange="onStrokeEnabledChange();" data-hint="toggle stroke">
+	 <button id="strokeColorPickButtonId" class="pickColorButton" onclick="onPickColor(true)" data-hint="pick stroke color">sss</button>
+	 <input type="checkbox" id="fillEnabledChkId" onChange="onFillEnabledChange();" data-hint="toggle fill">
+	 <button id="fillColorPickButtonId" class="pickColorButton" onclick="onPickColor(false)" data-hint="pick fill color">fff</button>
+</div>
+
+<div id="hintTextId" class="hintTextClass">
+</div>
+
+<!-- <svg width="100%" height="100%" id="mySVG" viewbox="0 0 110 110"> -->
+<!-- <g> -->
+<!-- crosshairs -->
+<!--
+<line x1="-100" y1="0" x2="100" y2="0" style="stroke:rgb(0,0,0);stroke-width:2" />
+<line x1="-0" y1="-100" x2="0" y2="100" style="stroke:rgb(0,0,0);stroke-width:2" />
+-->
+<!-- </g> -->
+<!-- </svg> -->
+
+</body>
+
+</html>

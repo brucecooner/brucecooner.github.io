@@ -41,13 +41,10 @@ function getPhotosPage(pageNum, pageSize, callback)
 
    console.log(`getting photo page ${pageNum}`)
 
-   // const requestUrl = 'http://localhost:3000'
-   const requestUrl = 'https://brucecooner.herokuapp.com'
-
+   const requestUrl = "https://lls74pw63f4rm3nxnuisltfgdq0qmtsj.lambda-url.us-east-2.on.aws"
    let requestString = requestUrl
-   requestString += '/photos/' + flickrUserId
-   requestString += '/pageSize/' + pageSize
-   requestString += '/page/' + pageNum
+   requestString += "?per_page=" + pageSize
+	requestString += "&page=" + pageNum
 
    var getPhotosXHR = new XMLHttpRequest();
 

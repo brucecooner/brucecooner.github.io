@@ -1,4 +1,4 @@
-var lastPhotoPageRequested = 0
+var lastPhotoPageRequested = undefined;
 var photosInfo = []
 let maxPhotoPages = 0
 const photoRequestPageSize = 25
@@ -11,21 +11,30 @@ let owner_handleMorePhotos = null
 const myUserId = '97403545@N00'
 
 // ---------------------------------------------------------------------------
+function photosStarted()
+{
+	return lastPhotoPageRequested;
+}
+
+// ---------------------------------------------------------------------------
 function photosStart(ownerCallback)
 {
-   lastPhotoPageRequested = 1
+	lastPhotoPageRequested = 1
 
-   owner_handleMorePhotos = ownerCallback
+	owner_handleMorePhotos = ownerCallback
 
-   getPhotosPage(lastPhotoPageRequested, photoRequestPageSize, getPhotosPageCallback)
+	getPhotosPage(lastPhotoPageRequested, photoRequestPageSize, getPhotosPageCallback)
 }
 
 // ----------------------------------------------------------------------------
 function getMorePhotos()
 {
-   lastPhotoPageRequested += 1
+	if (false == gettingPhotos)
+	{
+		lastPhotoPageRequested += 1
 
-   getPhotosPage(lastPhotoPageRequested, photoRequestPageSize, getPhotosPageCallback)
+		getPhotosPage(lastPhotoPageRequested, photoRequestPageSize, getPhotosPageCallback)
+	}
 }
 
 // ---------------------------------------------------------------------------

@@ -1,251 +1,446 @@
-﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/tr/html4/loose.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/tr/html4/loose.dtd">
 <html lang="en">
+
+
+ <!--------------------------------------------------------------------- -->
+ <!-- HEAD ------------------------------------------------------------- -->
+ <!--------------------------------------------------------------------- -->
 <head>
-    <title>Bruce Cooner's Personal Website</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="author" content="Bruce Cooner">
-    <meta name="description" content="personal website">
+	<title>personal website</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="author" content="Bruce Cooner">
+	<meta name="description" content="personal website">
 
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+	<link rel="stylesheet" type="text/css" href="gridstyles.css" />
+	<link rel="stylesheet" type="text/css" href="css/my-flickr.css" />
+	<link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
 </head>
+
+ <!--------------------------------------------------------------------- -->
+ <!-- BODY ------------------------------------------------------------- -->
+ <!--------------------------------------------------------------------- -->
 <body onload="onBodyLoad()">
-   <!-- <script src="assets/strings.js"></script> -->
-   <script src="libs/flickr.js"></script>
-   <script src="libs/jquery-3.1.1.min.js"></script>
-    <script>
-         const photographyColumnId = 'photographyColumnId'
-         // todo : get rid of other magic strings here
-         var columnIds = ['codeColumnId', photographyColumnId, 'craftColumnId']
 
-        var someCode = "default";
+	<script src="libs/flickr.js"></script>
+	<script src="libs/jquery-3.1.1.min.js"></script>
 
-        // --------------------------------------------------------------------
-         function onBodyLoad()
-         {
-            photosStart(handleSomePhotos)
+	<script>
+	$(document).ready( function()
+	{
+		$('body').on('keyup', bodyOnKeyUp)
+	});
 
-            // testing...
-            // var getCodeXHR = new XMLHttpRequest();
-            // getCodeXHR.open("GET", "./assets/SomeText.txt", true);
-            // getCodeXHR.onload = function (e)
-            // {
-            //    if (getCodeXHR.readyState === 4)
-            //    {
-            //       if (getCodeXHR.status === 200)
-            //       {
-            //          //console.log(getCodeXHR.responseText);
-            //          someCode = getCodeXHR.responseText;
-            //       }
-            //       else
-            //       {
-            //          console.error(getCodeXHR.statusText);
-            //       }
-            //    }
-            // };
-            // getCodeXHR.onerror = function (e)
-            // {
-            //    console.error(getCodeXHR.statusText);
-            // };
-            // getCodeXHR.send(null);
-         }
-
-         // -------------------------------------------------------------------
-        function clickColumn(clickedColumnId)
-        {
-            elem = document.getElementById(clickedColumnId)
-
-            // only grow a non-grown column
-            if (elem.className.includes("flexColumnMin"))
-            {
-                columnIds.forEach(function (id) {
-                    elem = document.getElementById(id)
-                    if (id == clickedColumnId)
-                    {
-                        elem.classList.remove("flexColumnMin")
-                        elem.classList.add("flexColumnFocus")
-                    }
-                    else
-                    {
-                        // and shrink the others
-                        elem.classList.remove("flexColumnFocus")
-                        elem.classList.add("flexColumnMin")
-                    }
-                });
-            }
-
-        }
-
-      // --------------------------------------------------------------------
-      function addPhotoHighlight(event)
-      {
-         event.currentTarget.classList.add("photoHighlight")
-      }
-      // --------------------------------------------------------------------
-      function removePhotoHighlight(event)
-      {
-         event.currentTarget.classList.remove("photoHighlight")
-      }
-
-      // --------------------------------------------------------------------
-      function photoClicked(event)
-      {
-         // A for maintainability, F for readability
-         photoColumnEl = $(`#${photographyColumnId}`)[0]
-
-         if ( false == photoColumnEl.classList.contains('flexColumnFocus') )
-         {
-            // console.log('NO OPEN')
-            event.preventDefault()
-         }
-         else
-         {
-            // console.log('YES OPEN')
-         }
-      }
-
-		// ----------------------------------------------------------------------
-		// won't allow default action on event if specified column is not open
-		function preventDefaultIfColumnNotInFocus(event, requiredColumnId)
+		// --------------------------------------------------------------------
+		function onBodyLoad()
 		{
-			requiredColumnEl = $(`#${requiredColumnId}`)[0];
+			// photosStart(handleSomePhotos);
+		}
 
-			if ( false == requiredColumnEl.classList.contains('flexColumnFocus') )
+	// --------------------------------------------------------------------------
+	function bodyOnKeyUp(event)
+	{
+		switch (event.originalEvent.key)
+		{
+			case 'Escape' :
+				clearColumnFocus();
+				break;
+			case '1':
+				onColumnClicked('leftColumnDivId');
+			break;
+			case '2':
+				onColumnClicked('centerColumnDivId');
+			break;
+			case '3':
+				onColumnClicked('rightColumnDivId');
+			break;
+		}
+	}
+
+		// --------------------------------------------------------------------
+		// despite photos being un-displayed when their column is out of focus, they still get click events,
+		// this function prevents that from following the link if the photo column is not in focus
+		function photoClicked(event)
+		{
+			// get photos column
+			let photoColumnEl = $(`#centerColumnDivId`)[0]
+
+			if ( false == photoColumnEl.hasAttribute("data-focus") )
 			{
-				event.preventDefault();
+				event.preventDefault()
 			}
 		}
 
-      // --------------------------------------------------------------------
-      function handleSomePhotos(photosArray)
-      {
-         // append 'em to something
-         var photoDiv = document.getElementById('photographyForegroundDivId')
+		// --------------------------------------------------------------------
+		function handleSomePhotos(photosArray)
+		{
+			// remove the flickr dots div from the doc, will re-add it to the end
+			// of the photos
+			const flickrLoadingDivEl = document.getElementById("flickrLoadingIconDivId");
+			if (flickrLoadingDivEl)
+			{
+				flickrLoadingDivEl.remove();
+			}
 
-         // oooh, that's a bad iterator name given the context, should fix that
-         photosArray.forEach( function(currentPhoto)
-         {
-            newImgContainerEl = document.createElement('div')
-            newImgContainerEl.classList.add("photographyImgContainerDiv")
-            newImgContainerEl.addEventListener('mouseover', addPhotoHighlight )
-            newImgContainerEl.addEventListener('mouseout', removePhotoHighlight )
+			// append 'em to something
+			const photoDiv = document.getElementById("photosContentDivId")
 
-            urlString = flickrPhotoInfoToUrl(currentPhoto)
-            newImgEl = document.createElement("img")
-            newImgEl.src = urlString
-            newImgEl.alt = currentPhoto['title']
-            newImgEl.classList.add("photographyImg")
-            newImgEl.addEventListener('click', photoClicked )
+			// oooh, that's a bad iterator name given the context, should fix that
+			photosArray.forEach( function(currentPhoto)
+			{
+				const newImgContainerEl = document.createElement('div');
+				newImgContainerEl.classList.add("photographyImgContainerDivClass");
 
-            newImgAnchor = document.createElement("a")
-            newImgAnchor.href = flickrPhotoInfoToPhotoPage(currentPhoto)
-            newImgAnchor.target = "_blank"
-            newImgAnchor.appendChild(newImgEl)
+				const urlString = flickrPhotoInfoToUrl(currentPhoto);
+				const newImgEl = document.createElement("img");
+				newImgEl.src = urlString;
+				newImgEl.alt = currentPhoto['title'];
+				newImgEl.classList.add("photographyImgClass");
+				newImgEl.addEventListener('click', photoClicked );
 
-            // newImgContainerEl.appendChild(newImgEl)
-            newImgContainerEl.appendChild(newImgAnchor)
+				const newImgAnchor = document.createElement("a");
+				newImgAnchor.href = flickrPhotoInfoToPhotoPage(currentPhoto);
+				newImgAnchor.target = "_blank";
+				newImgAnchor.appendChild(newImgEl);
 
-            if (currentPhoto['title'])
-            {
-               photoNameSpanEl = document.createElement("span")
-               photoNameSpanEl.innerHTML =  currentPhoto['title']
-               newImgContainerEl.appendChild(photoNameSpanEl)
-            }
+				newImgContainerEl.appendChild(newImgAnchor);
 
-            photoDiv.appendChild(newImgContainerEl)
-         })
-      }
+				if (currentPhoto['title'])
+				{
+					photoNameSpanEl = document.createElement("span");
+					photoNameSpanEl.innerHTML =  currentPhoto['title'];
+					newImgContainerEl.appendChild(photoNameSpanEl);
+				}
 
-      // ---------------------------------------------------------------------
-      // returns normalized amount of scroll on element
-      function currentScrollAmount(element)
-      {
-         var maxScroll = element.scrollHeight - element.offsetHeight
-         var amount = element.scrollTop / maxScroll
+				photoDiv.appendChild(newImgContainerEl);
+			})
 
-         return amount
-      }
+			// stick the flickr loading div at the end.
+			// Yes this means the loading icon is always visible, but they only see it if they scroll
+			// to the end of the photos, which means more photos are loading, which yes makes this
+			// a hack, but it's a mid-tier hack at least.
+			// (should not be re-added if they reach the end, but that would take a lot of scrolling)
+			if (flickrLoadingDivEl)
+			{
+				photoDiv.appendChild(flickrLoadingDivEl);
+			}
+		}
 
-      // ---------------------------------------------------------------------
-      function onPhotosScroll()
-      {
-         var photosEl = document.getElementById('photographyForegroundDivId')
+		// -------------------------------------------------------------------
+		// call on scroll event to do something when scroll goes beyond certain amount (0..1.0)
+		function scrolledToMaxHandler(elementIdStr, maxScroll, handler)
+		{
+			// ---------------------------------------------------------------------
+			// returns normalized amount of scroll on element
+			const currentScrollAmount = element =>
+			{
+				let maxScroll = element.scrollHeight - element.offsetHeight;
+				let amount = element.scrollTop / maxScroll;
+				return amount;
+			}
 
-         var scrollAmount = currentScrollAmount(photosEl)
+			const scrolledEl = document.getElementById(elementIdStr)
 
-         if (scrollAmount > 0.75 && (false == gettingPhotos))
-         {
-            getMorePhotos()
-         }
-      }
+			const scrollAmount = currentScrollAmount(scrolledEl)
 
-    </script>
+			if (scrollAmount > 0.75 && (false == gettingPhotos))
+			{
+				handler();
+			}
+		}
 
-    <div class="mainContainer">
-        <header class="mainHeader">
-          <h1>Bruce Cooner Dot Com (v0.1)</h1>
-			 <span>(click a column to see what I'm up to)</span>
-          <!-- <div class='socialIcons'>
-            <a href="http://www.flickr.com/photos/woodbits/" target="_blank" title="visit my photo page"><img src="https://s.yimg.com/pw/images/goodies/black-flickr.png" width="56" height="26" alt=""></a>
-         </div> -->
-        </header>
-        <div class="flexContainer">
-            <div class="flexColumnMin codeColumnClass" id="codeColumnId" onclick="clickColumn('codeColumnId')">
-                <h1>HE CODES!</h1>
-                <div class="codeBackgroundDivClass">
-                </div>
-                <div class="codeForegroundDivClass">
-                   <span>Still under construction here, but you can check out my </span>
-                   <a href="https://github.com/brucecooner/" target="_blank">git hub repo</a>
-                   <span> to see what I create and contribute to.<span>
-                   <br><br>
-                   <span>And <a href="spokes.html" target="_blank">here's</a> a little thing I wrote to generate radial lines because I couldn't find a decent gimp plugin to do it in a hurry.</span>
-                   <br>
-                   <br>
-                   <span> I had so much fun playing with the radial line generator I started a drawing app focused on radial symmetry. It's a work</span>
-                   <span> in progress but already fun to mess around with</span>
-                   <br>
-                   <a href="mandalaWIP\mandala.html">Mandala Creator (WIP)</a>
-                   <br>
-						 <br>
-						 <span> Another radial symmetry focused software toy, this one focused on parametrically laying out a bunch of circles.</span> 
-						 <span> This one's leap over my previous attempt is that it can export your creation to an SVG!</span> 
-                   <br>
-                   <a href="circles\circle_layout.html">Lots o' Circles (WIP)</a>
-               </div>
-            </div>
-            <div class="flexColumnMin photographyColumnClass" id="photographyColumnId" onclick="clickColumn('photographyColumnId')">
-                <h1>HE CAPTURES!</h1>
-                <div class='photographyBackgroundDivClass'>
-                </div>
-                <div class='photographyForegroundDivClass' id='photographyForegroundDivId' onscroll='onPhotosScroll()'>
-               </div>
-            </div>
-            <div class="flexColumnMin craftColumnClass" id="craftColumnId" onclick="clickColumn('craftColumnId')">
-                <h1>HE CREATES!</h1>
-                <div class="craftBackgroundDivClass">
-                </div>
-                <div class="craftForegroundDivClass">
-						<div>
-                   <h3>Click the wooden cactus to see my etsy shop filled with unique, desert inspired jewelry and crafts</h3>
-						 	<a	href="http://leaningcactus.etsy.com"
-								onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
-								target="_blank">
-								<img  width="200" src="https://i.etsystatic.com/isla/520f1a/30317740/isla_500x500.30317740_rhwhhobq.jpg?version=0">
-							</a>
-						</div>
-						<hr>
-						<div>
-						<h3>My own design of a laser cut model of the LZ 127 Graf Zeppelin.</h3>
-						<div>(click the picture for plans and build instructions)</div>
-						<a	href="LZ127/LZ127-notes.html"
-							onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
-							target="_blank">
-								<img src="LZ127/LZ127-completed.jpg" width="500">
-						</a>
-						</div>
-         </div>
-        </div>
-    </div>
+		// -------------------------------------------------------------------
+		function clearColumnFocus()
+		{
+			const allColumns = document.getElementsByClassName('columnDivClass');
+
+			const allColumnsArray = Array.from(allColumns);
+			allColumnsArray.forEach(curElem => {
+				if (curElem.hasAttribute('data-focus'))
+				{
+					curElem.removeAttribute('data-focus');
+				}
+			});
+		}
+
+		// -------------------------------------------------------------------
+		function onColumnClicked(clickedColumnId)
+		{
+			// begin fetching photos on first open of photography column
+			const photographyColumnDivId = 'centerColumnDivId';
+			if ((clickedColumnId == photographyColumnDivId) && !photosStarted())
+			{
+				photosStart(handleSomePhotos);
+			}
+
+			const clickedColumnElem = document.getElementById(clickedColumnId);
+
+			// only change focus if clicked on a non-focused column
+			if (!clickedColumnElem.hasAttribute('data-focus'))
+			{
+				const allColumns = document.getElementsByClassName('columnDivClass')
+
+				const allColumnsArray = Array.from(allColumns);
+				allColumnsArray.forEach(curElem => {
+					if (curElem.hasAttribute('data-focus'))
+					{
+						curElem.removeAttribute('data-focus');
+					}
+					else if (curElem.id == clickedColumnId)
+					{
+						curElem.setAttribute('data-focus', "");
+					}
+				});
+			}
+		}
+	</script>
+
+<div id="gridContainerId" class="gridContainerClass">
+	<div class="headerRowClass">
+		<h1>What does Bruce Cooner do?</h1>
+		<div class="headerGradientClass"></div>
+	</div>
+
+	<div id="columnsGridId" class="columnsGridClass">
+		<!-- ---------------------------------------------------------
+		LEFT COLUMN 
+		-------------------------------------------------------------- -->
+		<div id="leftColumnDivId" class="leftColumnClass codeColumnClass columnDivClass" onclick="onColumnClicked('leftColumnDivId')">
+			<h1 class="columnTitleHeaderClass">HE CODES!</h1>
+			<div id="projectSummaryDivId" class="columnContentDiv">
+				<h1>My github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repo</a></h1>
+					<p>The projects in my repo usually support some creative idea.<br>
+					They may come about to explore visual art, or to support the creation of a physical object.<br>
+					One thing I've discovered from this is that using software I wrote to help create a physical product that I can hold in my hands is very rewarding.<br>
+					I've detailed most of my personal projects here.<br>
+					They span a number of languages I've worked in, and there are links to the repo page for each.<br>
+					These should illustrate how I approach programming problems, trying to break a large job down into self contained pieces.
+					</p>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="https://github.com/brucecooner/EarthSlicer" target="_blank">Earth Slicer</a></h2>
+					<span class="codeTypeClass">Python</span><br>
+					<p>
+					This project grew from my frustrations trying to make topographical models using the previous project (FLT to Topo).
+					A top down topograpical model can require a lot of individual pieces, which have to be individually tracked and
+					correctly placed.<br><br>
+					So I turned the problem on its side and instead of tracing isolines, I traced elevations along vertical "slices" of earth,
+					which just get placed next to each other to create the model.  This reduced the placement/registration to a one dimensional problem.<br>
+					<br>
+					For this project I switched from C# to Python, but the biggest functional change was using the USGS point height query
+					service to get elevations instead of downloading large datasets, which greatly simplified the workflow.<br>
+					I quickly found however that querying the elevations serially was too slow, so I refactored the query code to issue parallel queries. 
+					Another optimization was to cache returned elevations in a local text file, that way running the same jobs again did not 
+					even need to query the server.<br>
+					This app was written to output the slices in svg files ready to load and use in the laser cutter without requiring any further workflow steps.
+					<br>
+					This has made for some interesting physical models, but I'm still thinking about how to use these results in an artistic way.
+					They would make a good basis for a solid sculpture, giving you a ready made base for clay or other material.
+					<br>
+					</p>
+					<p>Here's an inset of one of the svg images produced by EarthSlicer:</p>
+					<a href=".\assets\es6.jpg" target="_blank"><img src="assets\es6.jpg" width="100"/></a>
+					<br>
+					<p>These pictures show a couple of cardboard physical models that came out of this project.</p>
+					<a href=".\assets\es4.jpg" target="_blank"><img src="assets\es4.jpg" width="100"/></a>
+					<a href=".\assets\es5.jpg" target="_blank"><img src="assets\es5.jpg" width="100"/></a>
+					<a href=".\assets\es1.jpg" target="_blank"><img src="assets\es1.jpg" width="100"/></a>
+					<a href=".\assets\es2.jpg" target="_blank"><img src="assets\es2.jpg" width="100"/></a>
+					<a href=".\assets\es3.jpg" target="_blank"><img src="assets\es3.jpg" width="100"/></a>
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="https://github.com/brucecooner/FLTTopo" target="_blank">FLT to topo</a></h2>
+					<span class="codeTypeClass">C#</span>
+					<p>
+					After acquiring a laser cutter years ago, I wanted to make topographically inspired maps.
+					For this to work I needed contour maps with the isolines at arbitrary elevations that weren't necessarily powers of ten.<br>
+					I found out that I could download FLT/HDR format height maps from the USGS, so I wrote an application that could
+					produce my arbitrarily contoured from these source files. I enjoyed breaking the problem down into smaller chunks of
+					functionality, but my favorite part of this experience was using parallelism to massively decrease the time required to 
+					create the output data.<br>
+					While this program did what I intended it to do, unfortunately I found working contour maps in physical form to be unwieldy
+					due to the large number of individual pieces the process produced.  Also, being forced to work with downloaded data which
+					was broken on one degree boundaries quickly became limiting.  
+					So I abandoned this project, and started the Earth Slicer project to make working with topographical data easiser.<br>
+					Below are a couple of output images produced by the FLTTopo program.
+					</p><br>
+					<a href=".\assets\FLTTopo1.jpg" target="_blank"><img src="assets\FLTTopo1.jpg" width="100"/></a>
+					<a href=".\assets\FLTTopo2.jpg" target="_blank"><img src="assets\FLTTopo2.jpg" width="100"/></a>
+
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="mandalaWIP\mandala.html " target="_blank">mandala creator</a></h2>
+					<span class="codeTypeClass">HTML/Javascript</span>
+					<p>I had so much fun playing with the spokes maker that I created a drawing app completely focused on radial symmetry.<br>
+					With it you draw lines (straight or freeform), circles, or curves onto a bunch of radial slices of a canvas, and you can 
+					increase the number of to draw a whole lot of elements in a hurry.<br>
+					I had more things in mind for this project but I got distracted and set it aside. It still wound up as something that's
+					a lot of fun to play with though.<br>
+					It's purely javascript, running in the browser, making extensive use of vector graphics.<br>
+					Aspects of this project I particularly enjoyed were using object oriented design and classes to support the different drawing modes through a 
+					common interface, and figuring out how to create the snap-to system.<br>
+					(<a href="https://github.com/brucecooner/MandalaMaker" target="_blank">code on github</a>)
+					</p>
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="circles\circle_layout.html" target="_blank">parametric circles</a></h2>
+					<span class="codeTypeClass">HTML/Javascript</span>
+					<p>I was pretty obsessed with radial symmetry for a while, and made yet another toy along that theme.<br>
+					This one however focused on laying out a bunch of circles along a set of spokes, with parametric controls to change
+					the layout dynamically.
+					Again, I had more ideas for this project but got distracted. I was planning to expand the number of element types beyond
+					just circles, and it obviously needed a lot more instruction and feedback for ease of use.
+					This is another javascript project that runs in the browser. I made sure this project can export to svg format.
+					One unexpectedly fun aspect of this one was creating a color selection wheel for changing the stroke/fill colors.  It was not
+					easy to accomplish but a lot of fun.
+					Being parametric in nature, I was also able to add save/restore feature through local browser storage, which is pretty neat.<br>
+					I did actually use this tool to export some circular art that went into a physical product made on my laser cutter.<br>
+					(<a href="https://github.com/brucecooner/circles" target="_blank">code on github</a>)
+					</p>
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="https://github.com/brucecooner/brucecooner.github.io" target="_blank">this website</a></h2>
+					<span class="codeTypeClass">HTML/CSS/Javascript</span>
+					<p>I wrote this website.<br>
+					I found out that github hosts static sites freely for a user account, and decided that this is where I'd park one.<br>
+					But it was also an exercise in creating a website from raw HTML without the use of frameworks (maybe some jquery).<br>
+					After deciding on a three column layout, I originally implemented it in flex. This was difficult but worked okay. 
+					Recently however I've gone back and refactored it to use grid layout, which does present a simpler way to achieve overall layouts
+					(though flex still has its place).<br>
+					Do not assume, however, that I'm sort of layout wizard. I still have to look up about anything new or different I
+					go to do in html, and the interactions of CSS' various attributes is still largely a mystery to me.</p>
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="spokes.html" target="_blank">spokes maker</a></h2>
+					<span class="codeTypeClass">HTML/CSS</span><br>
+					<p>I was working on physical projects where there was a constant need to print out a template with N radially arranged
+					spokes for use as a stencil or template, but I didn't have an art program at the time that let me easily create one.
+					So I made this quick little spoke generator.
+					The fun part here was using only html and CSS to generate simple graphics.<br>
+					Sample output:<br></p>
+					<img src="\assets\screenshot-spokes.jpg" width="150"/>
+				</div>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="https://github.com/brucecooner/GF_scrapers" target="_blank">Glowforge dashboard job scraper</a></h2>
+					<span class="codeTypeClass">Javascript</span>
+					<p>
+					If you've owned a Glowforge laser cutter for any length of time, you know that the dashboard where you select a print job
+					will eventually become a huge list dozens of pages long.<br>
+					For the longest time, the dashboard offered no way to search this list, which led to endless scrolling to find anything
+					you'd printed more than a few weeks before.<br>
+					Each of these print jobs has a unique url, meaning you can visit them directly if you have the address, which gave me an idea...<br>
+					<br>
+					My reponse was to create a javascript module that you add to the dashboard page (via the browser debug console) which
+					hooks the scroll event and scrapes jobs and their urls as you scroll the page.<br>
+					After scrolling through your job list, you return to the debugger and call a function in the module to
+					list all of the jobs it has discovered in a tabular form, that you can drop directly into a spreadsheet.<br>
+					I will regularly scrape all of the jobs in my dashboard and drop it into a sheet so Ihave a full and fully visible
+					searchable list of all my print jobs.<br>
+					Glowforge recently added a search bar to the dashboard, which helps, but it's still useful to have a single page view
+					of my jobs list at times.
+					</p>
+				</div>
+
+			</div>
+		</div>
+		<!-- ---------------------------------------------------------
+		CENTER COLUMN 
+		-------------------------------------------------------------- -->
+		<div	id="centerColumnDivId"
+				class="centerColumnClass photosColumnClass columnDivClass"
+				onclick="onColumnClicked('centerColumnDivId')"
+				onscroll="scrolledToMaxHandler('centerColumnDivId', 0.85, getMorePhotos)">
+			<h1 class="columnTitleHeaderClass">HE CAPTURES!</h1>
+			<div id="photosContentDivId" class="columnContentDiv">
+				<h3>see on <a href="https://www.flickr.com/photos/woodbits" target="_blank">Flickr</a></h3>
+
+				<!-- flickr loading icon, it always just lives at end of photos so you only see it when you reach the end -->
+				<!-- note: wrapped in img container class so it displays like the other photos -->
+				<div id="flickrLoadingIconDivId"  class="photographyImgContainerDivClass">
+					<div class="flickrDotsDivClass">
+						<div	class="flickrBlueDotClass"></div>
+						<div	class="flickrPinkDotClass"></div>
+					</div>
+				</div>
+
+			</div>
+		</div>
+		<!-- ---------------------------------------------------------
+		RIGHT COLUMN 
+		-------------------------------------------------------------- -->
+		<div id="rightColumnDivId" class="rightColumnClass creativityColumnClass columnDivClass" onclick="onColumnClicked('rightColumnDivId')">
+			<h1 class="columnTitleHeaderClass">HE CREATES!</h1>
+			<div class="columnContentDiv">
+				<h1>Creative endeavors...</h1>
+				<p>I usually have several creative projects in progress.<br>
+				I document much of my work in a Flickr <a href="https://www.flickr.com/photos/woodbits/albums/72157594222510335/with/46239711811">album</a>
+				, but here I've collected here some of the things I've done over the years I'm particularly proud of.</p>
+				<hr>
+				<h2>Woodworking</h2>
+				<p>I've been a hobbyist level woodworker since I was young enough to wield a pull saw.<br>
+				It's a skill that has served me well, letting me create a lot of interesting and useful things.</p>
+				<br>
+				<p>Many years ago a coworker wanted a driving simulator cockpit that exactly matched the dimensions of his BMW's driver's seat, 
+				to which he could mount a very expensive steering wheel controller he had recently acquired, and he asked me to help make it a reality. 
+				The constraints made this a challenging and interesting project, and the result was a beautiful
+				piece of functional entertainment focused furniture which, as far as I know, still resides in the middle of his living room.</p>
+				<a href=".\assets\driving_simulator.jpg" target="_blank">
+					<img src="assets\driving_simulator.jpg" alt="simple three tiered wooden shelf" width="25%">
+				</a>
+				<br>
+				<hr>
+				<p>My wife requested a small three level shelf for her office space, and I took the opportunity to use a design I came
+				up with some time ago that I call the "K Leg", where the front legs become an X with the cross pushed back, so that
+				viewed from the side they form the shape of the letter K. I love the cantilever effect this lent to the middle shelf,
+				and it was very practical on this design as it makes the center shelf easier to use.</p>
+				<a href=".\assets\k_leg_shelf.jpg" target="_blank">
+					<img src="assets\k_leg_shelf.jpg" alt="simple three tiered wooden shelf" width="25%">
+				</a>
+
+				<hr>
+				<h2>Laser Cutting/Engraving</h2>
+				<br>
+				<p>For the past few years, a Glowforge laser cutter has been the focus of most of my creative activities.<br>
+				Part of the reason I got a laser cutter was to make laser cut wooden models. Before I could do that, however, I
+				had to learn some 3-d modeling skills. 
+				Once I was slightly proficient in Fusion I designed this cute little stubby rocket model.</p><br>
+
+				<a href=".\assets\stubby-rocket.jpg" target="_blank"><img src="assets\stubby-rocket.jpg" width="150"/></a>
+
+				<p>I've always been fascinated by zeppelins, and soon I was making small models of the LZ-127 Graf Zeppelin.<br>
+				My first zeppelin model was only about a foot in length.<br>
+				Clicking the image will take you to a page with instructions and downloads for the model:<br></p>
+				<a href=".\LZ127\LZ127-notes.html" target="_blank"><img src="LZ127\LZ127-completed.jpg" width="300"/></a>
+
+				<p>I soon had designed a larger one, however, that required more complicated assembly.</p>
+
+				TODO: medium zeppelin picture
+
+				<p>And then I bumped up the size again, to product a 48 inch long model.</p>
+
+				TODO: large zeppelin picture
+
+				<h2><a href="https://www.thingiverse.com/bruce_cooner/designs">Thingiverse</a></h2>
+
+
+				TODO: laser cutter talk
+					-thingiverse link
+					-zeppelins
+					-small Graf
+				TODO: Laser Wheels
+				TODO: Earth Slicer creations
+				TODO: 
+				</p>
+			</div>
+		</div>
+	</div>
+
+</div>
+
 </body>
-</html>
+

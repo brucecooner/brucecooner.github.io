@@ -1,0 +1,301 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/tr/html4/loose.dtd">
+<html lang="en">
+<head>
+    <title>Bruce Cooner's Personal Website</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Bruce Cooner">
+    <meta name="description" content="personal website">
+
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel='shortcut icon' type='image/x-icon' href='/favicon.ico' />
+</head>
+<body onload="onBodyLoad()">
+   <!-- <script src="assets/strings.js"></script> -->
+   <script src="libs/flickr.js"></script>
+   <script src="libs/jquery-3.1.1.min.js"></script>
+    <script>
+         const photographyColumnId = 'photographyColumnId'
+         // todo : get rid of other magic strings here
+         var columnIds = ['codeColumnId', photographyColumnId, 'craftColumnId']
+
+        var someCode = "default";
+
+        // --------------------------------------------------------------------
+         function onBodyLoad()
+         {
+            photosStart(handleSomePhotos)
+
+            // testing...
+            // var getCodeXHR = new XMLHttpRequest();
+            // getCodeXHR.open("GET", "./assets/SomeText.txt", true);
+            // getCodeXHR.onload = function (e)
+            // {
+            //    if (getCodeXHR.readyState === 4)
+            //    {
+            //       if (getCodeXHR.status === 200)
+            //       {
+            //          //console.log(getCodeXHR.responseText);
+            //          someCode = getCodeXHR.responseText;
+            //       }
+            //       else
+            //       {
+            //          console.error(getCodeXHR.statusText);
+            //       }
+            //    }
+            // };
+            // getCodeXHR.onerror = function (e)
+            // {
+            //    console.error(getCodeXHR.statusText);
+            // };
+            // getCodeXHR.send(null);
+         }
+
+         // -------------------------------------------------------------------
+        function clickColumn(clickedColumnId)
+        {
+            elem = document.getElementById(clickedColumnId)
+
+            // only grow a non-grown column
+            if (elem.className.includes("flexColumnMin"))
+            {
+                columnIds.forEach(function (id) {
+                    elem = document.getElementById(id)
+                    if (id == clickedColumnId)
+                    {
+                        elem.classList.remove("flexColumnMin")
+                        elem.classList.add("flexColumnFocus")
+                    }
+                    else
+                    {
+                        // and shrink the others
+                        elem.classList.remove("flexColumnFocus")
+                        elem.classList.add("flexColumnMin")
+                    }
+                });
+            }
+
+        }
+
+      // --------------------------------------------------------------------
+      function addPhotoHighlight(event)
+      {
+         event.currentTarget.classList.add("photoHighlight")
+      }
+      // --------------------------------------------------------------------
+      function removePhotoHighlight(event)
+      {
+         event.currentTarget.classList.remove("photoHighlight")
+      }
+
+      // --------------------------------------------------------------------
+      function photoClicked(event)
+      {
+         // A for maintainability, F for readability
+         photoColumnEl = $(`#${photographyColumnId}`)[0]
+
+         if ( false == photoColumnEl.classList.contains('flexColumnFocus') )
+         {
+            // console.log('NO OPEN')
+            event.preventDefault()
+         }
+         else
+         {
+            // console.log('YES OPEN')
+         }
+      }
+
+		// ----------------------------------------------------------------------
+		// won't allow default action on event if specified column is not open
+		function preventDefaultIfColumnNotInFocus(event, requiredColumnId)
+		{
+			requiredColumnEl = $(`#${requiredColumnId}`)[0];
+
+			if ( false == requiredColumnEl.classList.contains('flexColumnFocus') )
+			{
+				event.preventDefault();
+			}
+		}
+
+      // --------------------------------------------------------------------
+      function handleSomePhotos(photosArray)
+      {
+         // append 'em to something
+         var photoDiv = document.getElementById('photographyForegroundDivId')
+
+         // oooh, that's a bad iterator name given the context, should fix that
+         photosArray.forEach( function(currentPhoto)
+         {
+            newImgContainerEl = document.createElement('div')
+            newImgContainerEl.classList.add("photographyImgContainerDiv")
+            newImgContainerEl.addEventListener('mouseover', addPhotoHighlight )
+            newImgContainerEl.addEventListener('mouseout', removePhotoHighlight )
+
+            urlString = flickrPhotoInfoToUrl(currentPhoto)
+            newImgEl = document.createElement("img")
+            newImgEl.src = urlString
+            newImgEl.alt = currentPhoto['title']
+            newImgEl.classList.add("photographyImg")
+            newImgEl.addEventListener('click', photoClicked )
+
+            newImgAnchor = document.createElement("a")
+            newImgAnchor.href = flickrPhotoInfoToPhotoPage(currentPhoto)
+            newImgAnchor.target = "_blank"
+            newImgAnchor.appendChild(newImgEl)
+
+            // newImgContainerEl.appendChild(newImgEl)
+            newImgContainerEl.appendChild(newImgAnchor)
+
+            if (currentPhoto['title'])
+            {
+               photoNameSpanEl = document.createElement("span")
+               photoNameSpanEl.innerHTML =  currentPhoto['title']
+               newImgContainerEl.appendChild(photoNameSpanEl)
+            }
+
+            photoDiv.appendChild(newImgContainerEl)
+         })
+      }
+
+      // ---------------------------------------------------------------------
+      // returns normalized amount of scroll on element
+      function currentScrollAmount(element)
+      {
+         var maxScroll = element.scrollHeight - element.offsetHeight
+         var amount = element.scrollTop / maxScroll
+
+         return amount
+      }
+
+      // ---------------------------------------------------------------------
+      function onPhotosScroll()
+      {
+         var photosEl = document.getElementById('photographyForegroundDivId')
+
+         var scrollAmount = currentScrollAmount(photosEl)
+
+         if (scrollAmount > 0.75 && (false == gettingPhotos))
+         {
+            getMorePhotos()
+         }
+      }
+
+    </script>
+
+    <div class="mainContainer">
+        <header class="mainHeader">
+          <h1>What does Bruce do?</h1><span>(click a column to check it out)</span>
+        </header>
+        <div class="flexContainer">
+            <div class="flexColumnMin codeColumnClass" id="codeColumnId" onclick="clickColumn('codeColumnId')">
+                <h1 class="columnTitleHeader">HE CODES!</h1>
+                <!-- <div class="codeBackgroundDivClass">
+                </div> -->
+                <div class="codeForegroundDivClass">
+                   <h1>My personal github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repo</a></h1>
+							<div class="codeColumnDiv">
+							<p>The projects in my repo have served my own creative purposes.<br>
+							They may come about purely to explore visual ideas, or to support the creation of a physical object.<br>
+							One thing I've discovered from this is that using software I wrote to help create a physical product that I can hold in my hands is very rewarding.<br>
+							I've gathered a few interesting personal projects here.<br>
+							These span a number of languages I've worked in, and hopefully illustrate how I approach programming problems.
+							</p>
+							</div>
+							<hr>
+							<div class="codeColumnDiv">
+							<h2><a href="spokes.html" target="_blank">spokes maker</a></h2>
+							<span>HTML/CSS</span>
+							<p>I was working on projects where there was a constant need to print out a template with N radially arranged
+							spokes for use as a stencil or template, but I didn't have an art program at the time that let me easily create one.
+							So I made this quick little spoke generator.
+							The fun part here was using only html and CSS to generate simple graphics.</p>
+						</div>
+						<hr>
+						<div class="codeColumnDiv">
+						<h2><a href="mandalaWIP\mandala.html " target="_blank">mandala creator</a></h2>
+						<span>HTML/Javascript</span>
+						<p>I had so much fun playing with the spokes maker that I created a drawing app completely focused on radial symmetry.<br>
+						With it you draw lines (straight or freeform), circles, or curves onto a bunch of radial slices of a canvas, and you can 
+						increase the number of to draw a whole lot of elements in a hurry.<br>
+						I had more things in mind for this project but I got distracted and set it aside. It still wound up as something that's
+						a lot of fun to play with though.<br>
+						It's purely javascript, running in the browser, making extensive use of vector graphics.<br>
+						Aspects of this project I particularly enjoyed were using object oriented design and classes to support the different drawing modes through a 
+						common interface, and figuring out how to create the snap-to system.<br>
+						(<a href="https://github.com/brucecooner/MandalaMaker" target="_blank">code on github</a>)
+						</p>
+						</div>
+						<hr>
+						<div class="codeColumnDiv">
+						<h2><a href="circles\circle_layout.html" target="_blank">parametric circles</a></h2>
+						<span>HTML/Javascript</span>
+						<p>I was pretty obsessed with radial symmetry for a while, and made yet another toy along that theme.<br>
+						This one however focused on laying out a bunch of circles along a set of spokes, with parametric controls to change
+						the layout dynamically.
+						Again, I had more ideas for this project but got distracted. I was planning to expand the number of element types beyond
+						just circles, and it obviously needed a lot more instruction and feedback for ease of use.
+						This is another javascript project that runs in the browser. I made sure this project can export to svg format.
+						One unexpectedly fun aspect of this one was creating a color selection wheel for changing the stroke/fill colors.  It was not
+						easy to accomplish but a lot of fun.
+						Being parametric in nature, I was also able to add save/restore feature through local browser storage, which is pretty neat.<br>
+						I did actually use this tool to export some circular art that went into a physical product made on my laser cutter.<br>
+						(<a href="https://github.com/brucecooner/circles" target="_blank">code on github</a>)
+						</p>
+						</div>
+						<hr>
+						<div class="codeColumnDiv">
+						<h2><a href="https://github.com/brucecooner/circles" target="_blank">FLT to topo</a></h2>
+						<p>
+						After acquiring a laser cutter several years ago, I got the idea of making topographically inspired maps.
+						For this to work I needed contour maps with the isolines at arbitrary elevations.<br>
+						I discovered that I could download FLT/HDR format height maps from the USGS, so I wrote an application that could
+						produce my arbitrarily contoured from these source files. I enjoyed breaking the problem down into smaller chunks of
+						functionality, but my favorite part of this experience was using parallelism to massively decrease the time required to 
+						create the output data.<br>
+						While this program did what I intended it to do, unfortunately I found working contour maps in physical form to be unwieldy
+						due to the large number of individual pieces the process produced.  Also, being forced to work with downloaded data which
+						was broken on one degree boundaries quickly became limiting.  
+						But my next project would adress both of those issues...
+						</p>
+						</div>
+						<hr>
+						<div class="codeColumnDiv">
+						</div>
+               </div>
+            </div>
+				<!-- -------------------------------------------- -->
+            <div class="flexColumnMin photographyColumnClass" id="photographyColumnId" onclick="clickColumn('photographyColumnId')">
+                <h1 class="columnTitleHeader">HE CAPTURES!</h1>
+                <div class='photographyBackgroundDivClass'>
+                </div>
+                <div class='photographyForegroundDivClass' id='photographyForegroundDivId' onscroll='onPhotosScroll()'>
+						<h2>My photostream on <a href="https://www.flickr.com/photos/woodbits" target="_blank">Flickr</a></h2><br>
+               </div>
+            </div>
+            <div class="flexColumnMin craftColumnClass" id="craftColumnId" onclick="clickColumn('craftColumnId')">
+                <h1 class="columnTitleHeader">HE CREATES!</h1>
+                <div class="craftBackgroundDivClass">
+                </div>
+                <div class="craftForegroundDivClass">
+						<div>
+                   <h3>Click the wooden cactus to see my etsy shop filled with unique, desert inspired jewelry and crafts</h3>
+						 	<a	href="http://leaningcactus.etsy.com"
+								onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
+								target="_blank">
+								<img  width="200" src="https://i.etsystatic.com/isla/520f1a/30317740/isla_500x500.30317740_rhwhhobq.jpg?version=0">
+							</a>
+						</div>
+						<hr>
+						<div>
+						<h3>My own design of a laser cut model of the LZ 127 Graf Zeppelin.</h3>
+						<div>(click the picture for plans and build instructions)</div>
+						<a	href="LZ127/LZ127-notes.html"
+							onclick="preventDefaultIfColumnNotInFocus(event, 'craftColumnId')"
+							target="_blank">
+								<img src="LZ127/LZ127-completed.jpg" width="500">
+						</a>
+						</div>
+         </div>
+        </div>
+    </div>
+</body>
+</html>

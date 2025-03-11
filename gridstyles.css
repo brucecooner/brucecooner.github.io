@@ -1,0 +1,245 @@
+:root
+{
+	--bright-text-color: rgb(200, 200, 200);
+	--dark-text-color: rgb(100,100,100);
+
+	--header-background-color: #3e3e3f;
+	--header-gradient-bottom: #2b2b2c;
+}
+
+body {
+	font-family: Arial, Helvetica, sans-serif;
+	overflow: hidden;
+}
+
+a:visited
+{
+	color: var(--bright-text-color);
+}
+
+/* mystery margins, seem to default to 20 */
+h1
+{
+	margin:5px;
+}
+h2
+{
+	margin:5px;
+}
+h3
+{
+	margin:5px;
+}
+
+/* main grid */
+.gridContainerClass {
+	height: 100vh;
+	width: 100vw;
+	display: grid;
+	gap: 0px;
+	grid-template-columns: 1fr;
+	grid-template-rows: auto 1fr;
+	background-color: lightblue;
+}
+
+/* first row of main grid is full-width header */
+.headerRowClass {
+	color: var(--bright-text-color);
+
+	margin: 0px;
+
+	background-color: var(--header-background-color);
+	/* border-bottom: 5px solid darkgrey; */
+}
+
+.headerGradientClass
+{
+	height: 15px;
+	width: 100%;
+	/* background: rgb(2,0,36); */
+	background: linear-gradient(var(--header-background-color), var(--header-gradient-bottom)); 
+}
+
+/* second row of main grid is a three column grid */
+.columnsGridClass {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+
+	color: var(--bright-text-color);
+
+	transition: 500ms;
+
+	overflow: hidden;
+}
+
+/* adjust grid spacing with column focus */
+#columnsGridId:has(.leftColumnClass[data-focus])
+{
+	grid-template-columns: 2.5fr 0.25fr 0.25fr;
+}
+
+#columnsGridId:has(.centerColumnClass[data-focus])
+{
+  grid-template-columns: 0.25fr 2.5fr 0.25fr;
+}
+
+#columnsGridId:has(.rightColumnClass[data-focus])
+{
+	grid-template-columns: 0.25fr 0.25fr 2.5fr;
+}
+
+/* each of the three columns' "main" (outer) container */
+.columnDivClass
+{
+	color:var(--bright-text-color);
+	/* overflow-y: scroll; */
+	padding: 8px;
+
+	transition: all 0.25s;
+}
+
+/* hide column content when not focused */
+.columnDivClass:not([data-focus]) > .columnContentDiv
+{
+	opacity:0;
+	transition: opacity 0.25s;
+}
+
+/* columns only scrollable when focused */
+.columnDivClass[data-focus]
+{
+	overflow-y:scroll;
+}
+.columnDivClass:not([data-focus])
+{
+	overflow-y:hidden;
+}
+
+/* 'click me' cursor on non-focused columns */
+.columnDivClass:not([data-focus]):hover
+{
+	cursor:pointer;
+}
+
+/* column header (rotated) */
+h1.columnTitleHeaderClass
+{
+	color:var(--bright-text-color);
+
+	transition: opacity 0.25s;
+
+	position:absolute;
+
+	transform: rotate(90deg);
+	transform-origin: left bottom;
+	white-space:nowrap;
+	margin:0;
+}
+
+/* hide column header on focus */
+.columnDivClass[data-focus] > .columnTitleHeaderClass
+{
+	opacity:0;
+}
+
+.flexCenterClass
+{
+	display: flex;
+	justify-content: center;
+}
+
+/* code column ---------------------------------------------------------- */
+.codeColumnClass
+{
+	background-color: rgb(60, 16, 16);
+	background-image:url('assets/c_prompt.png');
+	background-repeat:no-repeat;
+	background-position: center;
+}
+
+.projectSummaryClass
+{
+	margin:5px;
+}
+
+.codeTypeClass
+{
+	font-size: 80%;
+}
+
+
+/* photos column ---------------------------------------------------------- */
+.photosColumnClass
+{
+	background-color:#091a09;
+	/* background-image:url('assets/Rebel550D-darkened.jpg'); */
+	background-image: url('assets/Canon_550D_F.png');
+	background-repeat:no-repeat;
+	background-position: center;
+}
+
+/* outer container of an img, wraps an anchor */
+.photographyImgContainerDivClass
+{
+   display:inline-block;
+   border-width: 0px 0px 0px 0px;
+
+   position:relative;
+   padding: 0px 0px 0px 0px;
+   margin: 10px 10px 10px 10px;
+
+   vertical-align:middle;
+}
+
+/* 'inner' container of img, is wrapped by anchor */
+.photographyImgClass
+{
+	border-style:solid;
+	border-width: 3px;
+	border-radius: 2px;
+	border-color: gray;
+	background-color:red;
+
+	transition: all 0.25s;
+}
+
+/* highlight photo border on hover */
+.photographyImgClass:hover
+{
+	border-style:solid;
+	border-color: white;
+
+	transition: all 0.25s;
+	/* cursor:default; */
+}
+
+/* image title span (upper left corner) */
+.photographyImgContainerDivClass span
+{
+	color:lightgray;
+	font-size: 0.8em;
+	font-weight:bold;
+   background-color: rgb(10, 11, 42);
+	opacity:0.4;
+
+	position:absolute;
+	left:6px;
+	top:6px;
+
+	padding: 3px 3px 3px 3px;
+	border-radius: 6px;
+	transition: all 0.5s;
+}
+
+/* highlight image title span on hover */
+.photographyImgContainerDivClass:hover span
+{
+	color:white;
+	opacity:0.8;
+}
+
+/* creativity column ------------------------------------ */
+.creativityColumnClass
+{
+	background-color: #10122e;
+}

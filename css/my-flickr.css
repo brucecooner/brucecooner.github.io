@@ -1,0 +1,59 @@
+/* root container for flickr loading icon stuff */
+.flickrDotsDivClass
+{
+	--flickr-blue-dot-color: #0063dc;
+	--flickr-pink-dot-color: #ff0084;
+	--flickr-dot-radius: 10px;
+	--flickr-dot-anim-duration: 2s;
+	--flickr-dot-anim-curve: linear;
+	/* how far dots move on each side of square they trace out */
+	--flickr-dot-movement-dist: calc(var(--flickr-dot-radius) * 1.5);
+
+	position:relative;
+	width:calc(var(--flickr-dot-movement-dist) + (var(--flickr-dot-radius) * 2));
+	height:calc(var(--flickr-dot-movement-dist) + (var(--flickr-dot-radius) * 2));
+}
+
+.flickrBlueDotClass
+{
+	width:0px;
+	height:0px;
+	border-width:var(--flickr-dot-radius);
+	border-radius:var(--flickr-dot-radius);
+	border-color:var(--flickr-blue-dot-color);
+	border-style:solid;
+	position:absolute;
+	animation: flickrDot1Anim var(--flickr-dot-anim-duration) infinite var(--flickr-dot-anim-curve);
+}
+
+.flickrPinkDotClass
+{
+	width:0px;
+	height:0px;
+	border-width:var(--flickr-dot-radius);
+	border-radius:var(--flickr-dot-radius);
+	border-color:var(--flickr-pink-dot-color);
+	border-style:solid;
+	position:absolute;
+	animation: flickrDot2Anim var(--flickr-dot-anim-duration) infinite var(--flickr-dot-anim-curve);
+}
+
+/* starts in upper left corner, moves clockwise */
+@keyframes flickrDot1Anim
+{
+	0% { top:0px; left:0px }
+	25% { top:0px; left:var(--flickr-dot-movement-dist); }
+	50% { top: var(--flickr-dot-movement-dist); left:var(--flickr-dot-movement-dist) }
+	75% { top: var(--flickr-dot-movement-dist); left: 0px }
+	100% { top:0px; left:0px }
+}
+
+/* starts in lower right corner, moves clockwise */
+@keyframes flickrDot2Anim
+{
+	0% { top: var(--flickr-dot-movement-dist); left:var(--flickr-dot-movement-dist) }
+	25% { top: var(--flickr-dot-movement-dist); left: 0px }
+	50% { top:0px; left:0px }
+	75% { top:0px; left:var(--flickr-dot-movement-dist); }
+	100% { top: var(--flickr-dot-movement-dist); left:var(--flickr-dot-movement-dist) }
+}

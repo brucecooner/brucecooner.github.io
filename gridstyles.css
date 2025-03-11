@@ -30,6 +30,12 @@ h3
 {
 	margin:5px;
 }
+p
+{
+	margin:4px;
+	line-height: 130%;
+	font-weight:bold;
+}
 
 /* main grid */
 .gridContainerClass {

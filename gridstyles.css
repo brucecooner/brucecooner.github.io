@@ -130,6 +130,8 @@ p
 /* column header (rotated) */
 h1.columnTitleHeaderClass
 {
+	font-size:350%;
+
 	color:var(--bright-text-color);
 
 	transition: opacity 0.25s;
@@ -158,9 +160,8 @@ h1.columnTitleHeaderClass
 .codeColumnClass
 {
 	background-color: rgb(60, 16, 16);
-	background-image:url('assets/c_prompt.png');
-	background-repeat:no-repeat;
-	background-position: center;
+	background-image: url('assets/digits.png');
+	background-repeat:repeat;
 }
 
 .projectSummaryClass
@@ -178,7 +179,6 @@ h1.columnTitleHeaderClass
 .photosColumnClass
 {
 	background-color:#091a09;
-	/* background-image:url('assets/Rebel550D-darkened.jpg'); */
 	background-image: url('assets/Canon_550D_F.png');
 	background-repeat:no-repeat;
 	background-position: center;

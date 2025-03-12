@@ -30,11 +30,11 @@
 		$('body').on('keyup', bodyOnKeyUp)
 	});
 
-		// --------------------------------------------------------------------
-		function onBodyLoad()
-		{
+	// --------------------------------------------------------------------
+	function onBodyLoad()
+	{
 			// photosStart(handleSomePhotos);
-		}
+	}
 
 	// --------------------------------------------------------------------------
 	function bodyOnKeyUp(event)
@@ -196,7 +196,7 @@
 
 <div id="gridContainerId" class="gridContainerClass">
 	<div class="headerRowClass">
-		<h1>What does Bruce Cooner do?</h1><p>(click a column to explore)</p>
+		<h1>What does Bruce Cooner do?</h1><p>(select a column to explore)</p>
 		<div class="headerGradientClass"></div>
 	</div>
 
@@ -207,29 +207,31 @@
 		<div id="leftColumnDivId" class="leftColumnClass codeColumnClass columnDivClass" onclick="onColumnClicked('leftColumnDivId')">
 			<h1 class="columnTitleHeaderClass">HE CODES!</h1>
 			<div id="projectSummaryDivId" class="columnContentDiv">
-				<h1>My github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repo</a></h1>
-					<p>The projects in my repo usually support some creative idea.<br>
-					They may come about to explore visual art, or to support the creation of a physical object.<br>
-					One thing I've discovered from this is that using software I wrote to help create a physical product that I can hold in my hands is very rewarding.<br>
-					I've detailed most of my personal projects here.<br>
-					They span a number of languages I've worked in, and there are links to the repo page for each.<br>
-					These should illustrate how I approach programming problems, trying to break a large job down into self contained pieces.
+				<h1>my github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repos</a></h1>
+					<p>My personal coding projects usually support some creative endeavor.<br>
+					They may come about to explore visual art, or to help make a physical object.<br>
+					In this, I've discovered that using software I wrote to help create a physical product is very rewarding.<br>
+					<br>
+					This section of the site details the personal software projects into which I've invested the most time.<br>
+					They span several languages, and hopefully illustrate how I approach software development, breaking down problems into well
+					defined chunks and writing (I hope) well documented and easy to understand code.<br>
+					Feel free to check out the repo links and have a closer look.<br>
 					</p>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="https://github.com/brucecooner/EarthSlicer" target="_blank">Earth Slicer</a></h2>
+					<h2><a href="https://github.com/brucecooner/EarthSlicer" target="_blank" title="code on github">Earth Slicer</a></h2>
 					<span class="codeTypeClass">Python</span><br>
 					<p>
-					This project grew from my frustrations trying to make topographical models using the previous project (FLT to Topo).
+					This project grew from my frustrations trying to make topographical models using the previous project (FLT to Topo, see below).
 					A top down topograpical model can require a lot of individual pieces, which have to be individually tracked and
-					correctly placed.<br><br>
-					So I turned the problem on its side and instead of tracing isolines, I traced elevations along vertical "slices" of earth,
-					which just get placed next to each other to create the model.  This reduced the placement/registration to a one dimensional problem.<br>
+					correctly positioned.<br><br>
+					So I turned the problem on its side and instead of tracing isolines, I traced the elevation along vertical "slices" of earth,
+					which then just get stacked next to each other to create the model.  This reduced registration (correct placement) to a one dimensional problem.<br>
 					<br>
-					For this project I switched from C# to Python, but the biggest functional change was using the USGS point height query
+					For this project I switched from C# to Python, but the biggest functional change was using the USGS elevation point query
 					service to get elevations instead of downloading large datasets, which greatly simplified the workflow.<br>
 					I quickly found however that querying the elevations serially was too slow, so I refactored the query code to issue parallel queries. 
-					Another optimization was to cache returned elevations in a local text file, that way running the same jobs again did not 
+					Another optimization was to cache returned elevations in a local text file, so running a job second and multiple times did not 
 					even need to query the server.<br>
 					This app was written to output the slices in svg files ready to load and use in the laser cutter without requiring any further workflow steps.
 					<br>
@@ -239,29 +241,49 @@
 					</p>
 					<p>Here's an inset of one of the svg images produced by EarthSlicer:</p>
 					<a href=".\assets\es6.jpg" target="_blank"><img src="assets\es6.jpg" width="100"/></a>
+					<p>The image demonstrates that I wrote the app to produce multiple slices to a single svg file, in a grid layout, which is configurable so that you can constrain 
+					the size of the grid.<br>
+					So while you may have a few svg files output from a job, each file with a grid of slices, a single job could produce hundreds of slices, which would be a truly
+					unwieldy number of files to manage.<br>
+					Also note the index number on each slice, so you can easily place them in the right order, and the direction arrow to relay slice orientation.</p>
 					<br>
-					<p>These pictures show a couple of cardboard physical models that came out of this project.</p>
+					<p>These pictures show the first physical model to come from this project, Mt. Ord in the Mazatzal Mountains of Arizona, which has always been one of my favorite peaks.
+					This model represents an approximately 6 by 4 mile section of earth, at a scale of around 0.45 miles per inch.<br>
+					This model's vertical scale is 1.0, which means this is a scale-accurate representation of the mountain's terrain!<br>
+					It was intensely pleasing to see this mini-mountain take shape as I glued the layers together.</p>
 					<a href=".\assets\es4.jpg" target="_blank"><img src="assets\es4.jpg" width="100"/></a>
 					<a href=".\assets\es5.jpg" target="_blank"><img src="assets\es5.jpg" width="100"/></a>
+					<p>For the second model, I wanted to reproduce the entire Sierra Estrella range, which rises just south of my home in Goodyear, Arizona.<br>
+					I also decided to try a something different, and added an option to the EarthSlicer to skip slices. I then
+					coded a quick tool to produce notched bars, which would become ribs beneath the model to hold it together.<br>
+					This model encompassed a much larger patch of earth, and I had to exaggerate the vertical scale to 1.75 or else the mountains would have
+					been only one inch high at the highest point.<br>
+					The results were pretty fantastic, and exactly what I wanted. I was debating a wall hanging piece on this theme, but
+					unfortunately the details of the topography disappear when viewed from above, as it would be hanging on a wall.
+					So I'm debating use of clay or other media to turn this into a solid model.</p>
 					<a href=".\assets\es1.jpg" target="_blank"><img src="assets\es1.jpg" width="100"/></a>
 					<a href=".\assets\es2.jpg" target="_blank"><img src="assets\es2.jpg" width="100"/></a>
 					<a href=".\assets\es3.jpg" target="_blank"><img src="assets\es3.jpg" width="100"/></a>
+					<p>In all I'm very pleased with this project though, and it is still under active development to support more creative ideas!</p>
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="https://github.com/brucecooner/FLTTopo" target="_blank">FLT to topo</a></h2>
+					<h2><a href="https://github.com/brucecooner/FLTTopo" target="_blank" title="code on github">FLT to topo</a></h2>
 					<span class="codeTypeClass">C#</span>
 					<p>
-					After acquiring a laser cutter years ago, I wanted to make topographically inspired maps.
-					For this to work I needed contour maps with the isolines at arbitrary elevations that weren't necessarily powers of ten.<br>
+					FLTToTopo was my first attempt at topographical exploration in software.<br>
+					After acquiring a laser cutter years ago, I decided I wanted to make topographically inspired maps.
+					For this to work with varying thickness of materials, I needed contour maps with the isolines at arbitrary 
+					elevations that weren't necessarily multiples of ten.<br>
 					I found out that I could download FLT/HDR format height maps from the USGS, so I wrote an application that could
 					produce my arbitrarily contoured from these source files. I enjoyed breaking the problem down into smaller chunks of
 					functionality, but my favorite part of this experience was using parallelism to massively decrease the time required to 
 					create the output data.<br>
-					While this program did what I intended it to do, unfortunately I found working contour maps in physical form to be unwieldy
-					due to the large number of individual pieces the process produced.  Also, being forced to work with downloaded data which
-					was broken on one degree boundaries quickly became limiting.  
-					So I abandoned this project, and started the Earth Slicer project to make working with topographical data easiser.<br>
+					While this program did what I intended it to do, unfortunately I found creating contour maps in physical form to be unwieldy
+					due to the large number of individual pieces the process produced.  Also, downloading and managing the data was cumberson, and being 
+					forced to work with downloaded data which was broken on one degree boundaries quickly became limiting.
+					So while the software did what I had designed it to do, I abandoned this project and started the Earth Slicer project to make working with 
+					topographical data easiser.<br>
 					Below are a couple of output images produced by the FLTTopo program.
 					</p><br>
 					<a href=".\assets\FLTTopo1.jpg" target="_blank"><img src="assets\FLTTopo1.jpg" width="100"/></a>
@@ -270,7 +292,7 @@
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="mandalaWIP\mandala.html " target="_blank">mandala creator</a></h2>
+					<h2><a href="mandalaWIP\mandala.html " target="_blank" title="launch">mandala creator</a></h2>
 					<span class="codeTypeClass">HTML/Javascript</span>
 					<p>I had so much fun playing with the spokes maker that I created a drawing app completely focused on radial symmetry.<br>
 					With it you draw lines (straight or freeform), circles, or curves onto a bunch of radial slices of a canvas, and you can 
@@ -285,7 +307,7 @@
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="circles\circle_layout.html" target="_blank">parametric circles</a></h2>
+					<h2><a href="circles\circle_layout.html" target="_blank" title="launch">parametric circles</a></h2>
 					<span class="codeTypeClass">HTML/Javascript</span>
 					<p>I was pretty obsessed with radial symmetry for a while, and made yet another toy along that theme.<br>
 					This one however focused on laying out a bunch of circles along a set of spokes, with parametric controls to change
@@ -302,20 +324,20 @@
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="https://github.com/brucecooner/brucecooner.github.io" target="_blank">this website</a></h2>
+					<h2><a href="https://github.com/brucecooner/brucecooner.github.io" target="_blank" title="code on github">this website</a></h2>
 					<span class="codeTypeClass">HTML/CSS/Javascript</span>
 					<p>I wrote this website.<br>
 					I found out that github hosts static sites freely for a user account, and decided that this is where I'd park one.<br>
 					But it was also an exercise in creating a website from raw HTML without the use of frameworks (maybe some jquery).<br>
-					After deciding on a three column layout, I originally implemented it in flex. This was difficult but worked okay. 
-					Recently however I've gone back and refactored it to use grid layout, which does present a simpler way to achieve overall layouts
+					After deciding on a three column layout, I originally implemented it in flex. This took some effort, and worked okay. 
+					Recently however I've gone back and refactored it to use grid layout, a simpler way to achieve complex layouts
 					(though flex still has its place).<br>
 					Do not assume, however, that I'm sort of layout wizard. I still have to look up about anything new or different I
-					go to do in html, and the interactions of CSS' various attributes is still largely a mystery to me.</p>
+					go to do in html, and the interactions of CSS' various attributes can still be a mystery to me.</p>
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="spokes.html" target="_blank">spokes maker</a></h2>
+					<h2><a href="spokes.html" target="_blank" title="launch">spokes maker</a></h2>
 					<span class="codeTypeClass">HTML/CSS</span><br>
 					<p>I was working on physical projects where there was a constant need to print out a template with N radially arranged
 					spokes for use as a stencil or template, but I didn't have an art program at the time that let me easily create one.
@@ -326,7 +348,7 @@
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
-					<h2><a href="https://github.com/brucecooner/GF_scrapers" target="_blank">Glowforge dashboard job scraper</a></h2>
+					<h2><a href="https://github.com/brucecooner/GF_scrapers" target="_blank" title="code on github">Glowforge dashboard job scraper</a></h2>
 					<span class="codeTypeClass">Javascript</span>
 					<p>
 					If you've owned a Glowforge laser cutter for any length of time, you know that the dashboard where you select a print job
@@ -337,12 +359,12 @@
 					<br>
 					My reponse was to create a javascript module that you add to the dashboard page (via the browser debug console) which
 					hooks the scroll event and scrapes jobs and their urls as you scroll the page.<br>
-					After scrolling through your job list, you return to the debugger and call a function in the module to
-					list all of the jobs it has discovered in a tabular form, that you can drop directly into a spreadsheet.<br>
-					I will regularly scrape all of the jobs in my dashboard and drop it into a sheet so Ihave a full and fully visible
+					After scrolling through your job list, you return to the debugger and call a function in my module to
+					list all of the jobs it has discovered in a tabular form, that you can copy from the console, then paste directly into a spreadsheet.<br>
+					I will regularly scrape all of the jobs in my dashboard and drop it into a sheet so I have a full and fully visible
 					searchable list of all my print jobs.<br>
-					Glowforge recently added a search bar to the dashboard, which helps, but it's still useful to have a single page view
-					of my jobs list at times.
+					Glowforge has since added a search bar to the dashboard, which helps, but it's sometimes more useful to have a single page view
+					of my entire jobs list.
 					</p>
 				</div>
 
@@ -357,7 +379,8 @@
 				onscroll="scrolledToMaxHandler('centerColumnDivId', 0.85, getMorePhotos)">
 			<h1 class="columnTitleHeaderClass">HE CAPTURES!</h1>
 			<div id="photosContentDivId" class="columnContentDiv">
-				<h3>see on <a href="https://www.flickr.com/photos/woodbits" target="_blank">Flickr</a></h3>
+				<h3 style="display:inline;">see on: <a href="https://www.flickr.com/photos/woodbits" target="_blank">Flickr</a></h3>/
+				<h3 style="display:inline;"><a href="https://www.instagram.com/brucecooner">Instagram</a></h3><br>
 
 				<!-- flickr loading icon, it always just lives at end of photos so you only see it when you reach the end -->
 				<!-- note: wrapped in img container class so it displays like the other photos -->
@@ -379,7 +402,7 @@
 				<h1>Creative endeavors...</h1>
 				<p>I usually have several creative projects in progress.<br>
 				I document much of my work in a Flickr <a href="https://www.flickr.com/photos/woodbits/albums/72157594222510335/with/46239711811">album</a>
-				, but here I've collected here some of the things I've done over the years I'm particularly proud of.</p>
+				, but here I've collected here some of the projects I've completed over the years I'm particularly proud of.</p>
 				<hr>
 				<h2>Woodworking</h2>
 				<p>I've been a hobbyist level woodworker since I was young enough to wield a pull saw.<br>

@@ -5,6 +5,8 @@
 
 	--header-background-color: #3e3e3f;
 	--header-gradient-bottom: #2b2b2c;
+
+	--visited-link-color: rgb(180,180,180);
 }
 
 body {
@@ -13,6 +15,10 @@ body {
 }
 
 a:visited
+{
+	color: var(--visited-link-color);
+}
+a:link
 {
 	color: var(--bright-text-color);
 }
@@ -31,6 +37,12 @@ h3
 	margin:5px;
 }
 p
+{
+	margin:4px;
+	line-height: 130%;
+	font-weight:bold;
+}
+span
 {
 	margin:4px;
 	line-height: 130%;
@@ -127,6 +139,7 @@ p
 	cursor:pointer;
 }
 
+
 /* column header (rotated) */
 h1.columnTitleHeaderClass
 {
@@ -144,10 +157,27 @@ h1.columnTitleHeaderClass
 	margin:0;
 }
 
+/* @media only screen and (min-heigt: 400px)
+{
+	h1.columnTitleHeaderClass
+	{
+		font-size:350%;
+	}
+}
+
+@media only screen and (max-heigt: 400px)
+{
+	h1.columnTitleHeaderClass
+	{
+		font-size:100%;
+	}
+} */
+
 /* hide column header on focus */
 .columnDivClass[data-focus] > .columnTitleHeaderClass
 {
 	opacity:0;
+	z-index: -1;
 }
 
 .flexCenterClass
@@ -247,5 +277,13 @@ h1.columnTitleHeaderClass
 /* creativity column ------------------------------------ */
 .creativityColumnClass
 {
+	background-image: url('assets/carpenter-icon-9.png');
+	background-repeat:no-repeat;
+	background-position: center;
 	background-color: #10122e;
+}
+
+.projectTypeClass
+{
+	font-size: 85%;
 }

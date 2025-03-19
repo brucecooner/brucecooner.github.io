@@ -23,6 +23,8 @@
 
 	<script src="libs/flickr.js"></script>
 	<script src="libs/jquery-3.1.1.min.js"></script>
+	<script src="HTMLGenerator.js"></script>
+	<script src="creativeColumnContent.js"></script>
 
 	<script>
 	$(document).ready( function()
@@ -33,7 +35,11 @@
 	// --------------------------------------------------------------------
 	function onBodyLoad()
 	{
-			// photosStart(handleSomePhotos);
+		// photosStart(handleSomePhotos);
+
+		// add creative column content
+		const creativeColumnDiv = document.getElementById('creativeContentDivId');
+		HTMLGenerator.generate(creativeColumnContent, creativeColumnDiv);
 	}
 
 	// --------------------------------------------------------------------------
@@ -205,14 +211,13 @@
 		LEFT COLUMN 
 		-------------------------------------------------------------- -->
 		<div id="leftColumnDivId" class="leftColumnClass codeColumnClass columnDivClass" onclick="onColumnClicked('leftColumnDivId')">
-			<h1 class="columnTitleHeaderClass">HE CODES!</h1>
+			<h1 class="columnTitleHeaderClass">   HE CODES!</h1>
 			<div id="projectSummaryDivId" class="columnContentDiv">
-				<h1>my github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repos</a></h1>
+				<h1>check out my github <a href="https://github.com/brucecooner?tab=repositories" target="_blank">repos</a></h1>
 					<p>My personal coding projects usually support some creative endeavor.<br>
-					They may come about to explore visual art, or to help make a physical object.<br>
-					In this, I've discovered that using software I wrote to help create a physical product is very rewarding.<br>
+					They may come about to explore visual art, or to assist making a physical object.<br>
 					<br>
-					This section of the site details the personal software projects into which I've invested the most time.<br>
+					This section of the site details personal software projects I've found the most interesting.<br>
 					They span several languages, and hopefully illustrate how I approach software development, breaking down problems into well
 					defined chunks and writing (I hope) well documented and easy to understand code.<br>
 					Feel free to check out the repo links and have a closer look.<br>
@@ -223,9 +228,8 @@
 					<span class="codeTypeClass">Python</span><br>
 					<p>
 					This project grew from my frustrations trying to make topographical models using the previous project (FLT to Topo, see below).
-					A top down topograpical model can require a lot of individual pieces, which have to be individually tracked and
-					correctly positioned.<br><br>
-					So I turned the problem on its side and instead of tracing isolines, I traced the elevation along vertical "slices" of earth,
+					A top down topograpical model can require a lot of individual pieces, which all have to be correctly positioned.<br><br>
+					So I turned the problem on its side and instead of tracing isolines, I traced elevation along vertical "slices" of earth,
 					which then just get stacked next to each other to create the model.  This reduced registration (correct placement) to a one dimensional problem.<br>
 					<br>
 					For this project I switched from C# to Python, but the biggest functional change was using the USGS elevation point query
@@ -235,16 +239,13 @@
 					even need to query the server.<br>
 					This app was written to output the slices in svg files ready to load and use in the laser cutter without requiring any further workflow steps.
 					<br>
-					This has made for some interesting physical models, but I'm still thinking about how to use these results in an artistic way.
-					They would make a good basis for a solid sculpture, giving you a ready made base for clay or other material.
+					This has made for some interesting physical models, which might become the base for more projects.
 					<br>
 					</p>
 					<p>Here's an inset of one of the svg images produced by EarthSlicer:</p>
-					<a href=".\assets\es6.jpg" target="_blank"><img src="assets\es6.jpg" width="100"/></a>
-					<p>The image demonstrates that I wrote the app to produce multiple slices to a single svg file, in a grid layout, which is configurable so that you can constrain 
-					the size of the grid.<br>
-					So while you may have a few svg files output from a job, each file with a grid of slices, a single job could produce hundreds of slices, which would be a truly
-					unwieldy number of files to manage.<br>
+					<a href=".\assets\es6.jpg" target="_blank"><img src="assets\es6.jpg" width="50%"/></a>
+					<p>The image shows tat the app sends multiple slices to a single svg file, in a grid layout with a configurable size.<br>
+					This grid output greatly reduces the number of individual files needed for a project.<br>
 					Also note the index number on each slice, so you can easily place them in the right order, and the direction arrow to relay slice orientation.</p>
 					<br>
 					<p>These pictures show the first physical model to come from this project, Mt. Ord in the Mazatzal Mountains of Arizona, which has always been one of my favorite peaks.
@@ -255,7 +256,7 @@
 					<a href=".\assets\es5.jpg" target="_blank"><img src="assets\es5.jpg" width="100"/></a>
 					<p>For the second model, I wanted to reproduce the entire Sierra Estrella range, which rises just south of my home in Goodyear, Arizona.<br>
 					I also decided to try a something different, and added an option to the EarthSlicer to skip slices. I then
-					coded a quick tool to produce notched bars, which would become ribs beneath the model to hold it together.<br>
+					coded a parametrically driven tool to produce notched bars, which would become ribs beneath the model to hold it together.<br>
 					This model encompassed a much larger patch of earth, and I had to exaggerate the vertical scale to 1.75 or else the mountains would have
 					been only one inch high at the highest point.<br>
 					The results were pretty fantastic, and exactly what I wanted. I was debating a wall hanging piece on this theme, but
@@ -264,7 +265,7 @@
 					<a href=".\assets\es1.jpg" target="_blank"><img src="assets\es1.jpg" width="100"/></a>
 					<a href=".\assets\es2.jpg" target="_blank"><img src="assets\es2.jpg" width="100"/></a>
 					<a href=".\assets\es3.jpg" target="_blank"><img src="assets\es3.jpg" width="100"/></a>
-					<p>In all I'm very pleased with this project though, and it is still under active development to support more creative ideas!</p>
+					<p>In all I'm very pleased with this project, and it is still under active development to support more creative ideas!</p>
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
@@ -272,16 +273,16 @@
 					<span class="codeTypeClass">C#</span>
 					<p>
 					FLTToTopo was my first attempt at topographical exploration in software.<br>
-					After acquiring a laser cutter years ago, I decided I wanted to make topographically inspired maps.
+					After acquiring a laser cutter, my fascination with geomorphology led me to want to make topographical maps.
 					For this to work with varying thickness of materials, I needed contour maps with the isolines at arbitrary 
-					elevations that weren't necessarily multiples of ten.<br>
-					I found out that I could download FLT/HDR format height maps from the USGS, so I wrote an application that could
-					produce my arbitrarily contoured from these source files. I enjoyed breaking the problem down into smaller chunks of
+					elevations that aren't necessarily multiples of ten.<br>
+					I discovered I could download FLT/HDR format height maps from the USGS, so I wrote an application that could read
+					these files and produce my arbitrarily contoured maps. I enjoyed breaking the problem down into smaller chunks of
 					functionality, but my favorite part of this experience was using parallelism to massively decrease the time required to 
 					create the output data.<br>
 					While this program did what I intended it to do, unfortunately I found creating contour maps in physical form to be unwieldy
 					due to the large number of individual pieces the process produced.  Also, downloading and managing the data was cumberson, and being 
-					forced to work with downloaded data which was broken on one degree boundaries quickly became limiting.
+					forced to work with data which never crossed a one degree boundary quickly became limiting.
 					So while the software did what I had designed it to do, I abandoned this project and started the Earth Slicer project to make working with 
 					topographical data easiser.<br>
 					Below are a couple of output images produced by the FLTTopo program.
@@ -327,13 +328,14 @@
 					<h2><a href="https://github.com/brucecooner/brucecooner.github.io" target="_blank" title="code on github">this website</a></h2>
 					<span class="codeTypeClass">HTML/CSS/Javascript</span>
 					<p>I wrote this website.<br>
-					I found out that github hosts static sites freely for a user account, and decided that this is where I'd park one.<br>
+					I found out that github hosts static sites freely for a user account, and decided that this is where I'd park mine.<br>
 					But it was also an exercise in creating a website from raw HTML without the use of frameworks (maybe some jquery).<br>
 					After deciding on a three column layout, I originally implemented it in flex. This took some effort, and worked okay. 
 					Recently however I've gone back and refactored it to use grid layout, a simpler way to achieve complex layouts
 					(though flex still has its place).<br>
 					Do not assume, however, that I'm sort of layout wizard. I still have to look up about anything new or different I
-					go to do in html, and the interactions of CSS' various attributes can still be a mystery to me.</p>
+					go to do in html, and the interactions of CSS' various attributes can still be a mystery to me.<br>
+					Looking at its early internet, programmer-art aesthetics will tell you that web design isn't my forte, but I still think it gets the point across.</p>
 				</div>
 				<hr>
 				<div class="projectSummaryClass">
@@ -377,7 +379,7 @@
 				class="centerColumnClass photosColumnClass columnDivClass"
 				onclick="onColumnClicked('centerColumnDivId')"
 				onscroll="scrolledToMaxHandler('centerColumnDivId', 0.85, getMorePhotos)">
-			<h1 class="columnTitleHeaderClass">HE CAPTURES!</h1>
+			<h1 class="columnTitleHeaderClass">   HE CAPTURES!</h1>
 			<div id="photosContentDivId" class="columnContentDiv">
 				<h3 style="display:inline;">see on: <a href="https://www.flickr.com/photos/woodbits" target="_blank">Flickr</a></h3>/
 				<h3 style="display:inline;"><a href="https://www.instagram.com/brucecooner">Instagram</a></h3><br>
@@ -397,68 +399,8 @@
 		RIGHT COLUMN 
 		-------------------------------------------------------------- -->
 		<div id="rightColumnDivId" class="rightColumnClass creativityColumnClass columnDivClass" onclick="onColumnClicked('rightColumnDivId')">
-			<h1 class="columnTitleHeaderClass">HE CREATES!</h1>
-			<div class="columnContentDiv">
-				<h1>Creative endeavors...</h1>
-				<p>I usually have several creative projects in progress.<br>
-				I document much of my work in a Flickr <a href="https://www.flickr.com/photos/woodbits/albums/72157594222510335/with/46239711811">album</a>
-				, but here I've collected here some of the projects I've completed over the years I'm particularly proud of.</p>
-				<hr>
-				<h2>Woodworking</h2>
-				<p>I've been a hobbyist level woodworker since I was young enough to wield a pull saw.<br>
-				It's a skill that has served me well, letting me create a lot of interesting and useful things.</p>
-				<br>
-				<p>Many years ago a coworker wanted a driving simulator cockpit that exactly matched the dimensions of his BMW's driver's seat, 
-				to which he could mount a very expensive steering wheel controller he had recently acquired, and he asked me to help make it a reality. 
-				The constraints made this a challenging and interesting project, and the result was a beautiful
-				piece of functional entertainment focused furniture which, as far as I know, still resides in the middle of his living room.</p>
-				<a href=".\assets\driving_simulator.jpg" target="_blank">
-					<img src="assets\driving_simulator.jpg" alt="simple three tiered wooden shelf" width="25%">
-				</a>
-				<br>
-				<hr>
-				<p>My wife requested a small three level shelf for her office space, and I took the opportunity to use a design I came
-				up with some time ago that I call the "K Leg", where the front legs become an X with the cross pushed back, so that
-				viewed from the side they form the shape of the letter K. I love the cantilever effect this lent to the middle shelf,
-				and it was very practical on this design as it makes the center shelf easier to use.</p>
-				<a href=".\assets\k_leg_shelf.jpg" target="_blank">
-					<img src="assets\k_leg_shelf.jpg" alt="simple three tiered wooden shelf" width="25%">
-				</a>
-
-				<hr>
-				<h2>Laser Cutting/Engraving</h2>
-				<br>
-				<p>For the past few years, a Glowforge laser cutter has been the focus of most of my creative activities.<br>
-				Part of the reason I got a laser cutter was to make laser cut wooden models. Before I could do that, however, I
-				had to learn some 3-d modeling skills. 
-				Once I was slightly proficient in Fusion I designed this cute little stubby rocket model.</p><br>
-
-				<a href=".\assets\stubby-rocket.jpg" target="_blank"><img src="assets\stubby-rocket.jpg" width="150"/></a>
-
-				<p>I've always been fascinated by zeppelins, and soon I was making small models of the LZ-127 Graf Zeppelin.<br>
-				My first zeppelin model was only about a foot in length.<br>
-				Clicking the image will take you to a page with instructions and downloads for the model:<br></p>
-				<a href=".\LZ127\LZ127-notes.html" target="_blank"><img src="LZ127\LZ127-completed.jpg" width="300"/></a>
-
-				<p>I soon had designed a larger one, however, that required more complicated assembly.</p>
-
-				TODO: medium zeppelin picture
-
-				<p>And then I bumped up the size again, to product a 48 inch long model.</p>
-
-				TODO: large zeppelin picture
-
-				<h2><a href="https://www.thingiverse.com/bruce_cooner/designs">Thingiverse</a></h2>
-
-
-				TODO: laser cutter talk
-					-thingiverse link
-					-zeppelins
-					-small Graf
-				TODO: Laser Wheels
-				TODO: Earth Slicer creations
-				TODO: 
-				</p>
+			<h1 class="columnTitleHeaderClass">   HE CREATES!</h1>
+			<div id="creativeContentDivId" class="columnContentDiv">
 			</div>
 		</div>
 	</div>

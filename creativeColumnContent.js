@@ -14,6 +14,21 @@ const creativeColumnContent =
 	{ "a" : {"href" : "https://laserwheels.etsy.com", "innerHTML": "Laser Wheels", "target":"_blank"}},
 	{ "hr" : "" },
 
+	{ "h2": "Iron Man Mk III helmet" },
+	{ "span": {"innerHTML" : "(vector design / laser cutting/engraving)", "class":"projectTypeClass"} },
+	{"p" : "I made a laser cut rendition of Tony Stark's MK III helmet as a gift for a friend. I designed it with \
+			acrylic eyes lit by LEDs inside the helmet, which considerably complicated its design and construction.<br> \
+			The results were worth it though, and this remains one of my favorite projects."},
+	{ "a" :	{ "href" : ".\\assets\\iron_man_mkiii_2.jpg", "target" : "_blank",
+					"children" : {"img" : {"src": "assets\\iron_man_mkiii_2.jpg", "style":{"width":"15%"}, "alt":"small laser cut cardboard model rocket ship"}}
+				}},
+	{ "a" :	{ "href" : ".\\assets\\iron_man_mkiii_3.jpg", "target" : "_blank",
+					"children" : {"img" : {"src": "assets\\iron_man_mkiii_3.jpg", "style":{"width":"15%"}, "alt":"small laser cut cardboard model rocket ship"}}
+				}},
+	{ "a" :	{ "href" : ".\\assets\\iron_man_mkiii_1.jpg", "target" : "_blank",
+					"children" : {"img" : {"src": "assets\\iron_man_mkiii_1.jpg", "style":{"width":"15%"}, "alt":"small laser cut cardboard model rocket ship"}}
+				}},
+
 	{ "h2": "automotive art" },
 	{ "span": {"innerHTML" : "(vector design / laser cutting/engraving)", "class":"projectTypeClass"} },
 	{"p" : "After owning a Glowforge laser cutter for a while, my interest in automobiles and miniatures drew me to creating \
@@ -92,9 +107,9 @@ const creativeColumnContent =
 	{ "h2": "K-leg shelf" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
 	{"p" : "My wife requested a small three level shelf for her office space, and I took the opportunity to use a design I came\
-				up with years before that I call the 'K Leg', where the front legs are an X with the cross pushed back, so that\
+				up with years ago that I call the 'K Leg', where the front legs are an X with the cross pushed back so that\
 				viewed from the side they form the shape of the letter K.<br>I love the cantilever effect this gave the middle shelf,\
-				and it was even practical on this design as it makes the center shelf easier to use."},
+				and it was even practical on this design as it makes the lower shelves easier to use."},
 	{ "a" :	{ "href" : ".\\assets\\k_leg_shelf.jpg", "target" : "_blank",
 					"children" : {"img" : {"src": "assets\\k_leg_shelf.jpg", "style":{"width":"25%"}, "alt":"wooden three tiered shelf"}}
 				}},
@@ -103,7 +118,7 @@ const creativeColumnContent =
 	{ "h2" : "Minecraft pig clock" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
 	{ "p" : "I played Minecraft for a while, primarily on a server run by a friend.<br>\
-				For a birthday gift one year I crafted a clock modeled after the pig seen in the game."},
+				For his birthday gift one year I crafted a whimsical clock modeled after the pig seen in the game."},
 	{ "a" :	{ "href" : ".\\assets\\mc_pig_clock.jpg", "target" : "_blank",
 					"children" : {"img" : {"src": "assets\\mc_pig_clock.jpg", "style":{"width":"25%"}, "alt":"clock in shape of pig from Minecraft"}}
 				}},
@@ -111,7 +126,7 @@ const creativeColumnContent =
 
 	{ "h2" : "saguaro @ sunset clock" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
-	{ "p" : "For a while I about all I made were clocks. After getting a bunch of castoff stock from a friend's father's cabinet shop,\
+	{ "p" : "For a while I made almost nothing but clocks. After getting a bunch of castoff stock from a friend's father's cabinet shop,\
 				I used some of it to create a clock inspired by a common scene in the desert where I live, viewing the setting sun between\
 				the arms of a saguaro cactus."},
 	{ "a" :	{ "href" : ".\\assets\\saguaro_clock.jpg", "target" : "_blank",
@@ -131,14 +146,13 @@ const creativeColumnContent =
 	{ "h2" : "arbor" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
 	{ "p" : "When we moved into our current home, there was a large bougainvillea over the front sidewalk, but it was draped over several small arbors made \
-				from thin metal rods lashed together which were insufficient to hold up the plant's weight. I addressed this by designing and building an arbor from \
-				redwood which was much stronger, but which also took advantage of the archway in which it sat for added support. It did its job for \
-				fifteen years, but just last year I noticed the angled beams of the arches were cracking due to the fact I had notched them too deeply on \
-				top to hold the longitudinal ribs. I put a ladder under it for support and replaced the cracked pieces, and it continues to do its job \
+				from thin metal rods and lashed together which were insufficient to hold up the plant's weight. I replaced that with one I built from \
+				redwood which was much stronger, and also took advantage of the archway where it was placed for added support. It did its job for \
+				fifteen years, but last year I noticed the angled beams of the arches were cracking on the load line, due to the fact I had notched them too deeply on \
+				top to hold the longitudinal ribs. I put a ladder under it for support and replaced the cracked pieces with an improved design, and it continues to do its job \
 				today, a decade and a half after it was built. The picture shows it \
-				immediately after installation, with the bougainvillea trimmed back to nearly nothing, but the hardy vine reclaimed this arbor in a few short \
-				months."},
-	{ "a" :	{ "href" : ".\\assets\\redwood_arbor.jpg", "target" : "_blank",
+				immediately after original installation, with the bougainvillea trimmed back to nearly nothing. The hardy vine reclaimed this arbor in just a few months."},
+				{ "a" :	{ "href" : ".\\assets\\redwood_arbor.jpg", "target" : "_blank",
 					"children" : {"img" : {"src": "assets\\redwood_arbor.jpg", "style":{"width":"15%"}, "alt":"wooden arbor"}}
 				}},
 

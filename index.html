@@ -30,6 +30,28 @@
 	$(document).ready( function()
 	{
 		$('body').on('keyup', bodyOnKeyUp)
+
+		// open columns for url params
+		const query_string = window.location.search;
+		const urlParams = new URLSearchParams(query_string);
+		if (urlParams.has('column'))
+		{
+			const column = urlParams.get('column');
+			switch (column)
+			{
+				case '1' :
+					onColumnClicked('leftColumnDivId');
+					break;
+				case '2' :
+					onColumnClicked('centerColumnDivId');
+					break;
+				case '3' :
+					onColumnClicked('rightColumnDivId');
+					break;
+				// default:
+				// 	console.log('unrecognized column parameter:', column);
+			}
+		}
 	});
 
 	// --------------------------------------------------------------------
@@ -222,6 +244,23 @@
 					defined chunks and writing (I hope) well documented and easy to understand code.<br>
 					Feel free to check out the repo links and have a closer look.<br>
 					</p>
+				<hr>
+				<div class="projectSummaryClass">
+					<h2><a href="https://github.com/brucecooner/casual_topographic/tree/main" target="_blank" title="code on github">Casual Topographic</a></h2>
+					<span class="codeTypeClass">Python/Typescript/Javascript</span><br>
+					<br>
+					<span>visit site:<a href="https://casual-topographic.onrender.com/" target="_blank">https://casual-topographic.onrender.com/</a></span><br>
+					<span>(It's hosted on the free tier and gets unloaded frequently, please be patient if it needs to reload.)</span><br>
+					<p>
+					Casual Topgraphic was an exercise to get my feet wet with Google Maps, and gave me a chance to use what I'd learned in 
+					making EarthSlicer (see below).<br>
+					It's just a Google Map where you can hover over a point (or touch on touch devices) to see the elevation of that point.<br>
+					The data is pulled from the USGS Elevation Point Query Service, so it's limited to North America.<br>
+					Sure there are other more official ways to view elevations but they all involve several steps, or more, so it's neat to be able to 
+					see elevations quickly and easily.
+					</p>
+					<a href=".\assets\CT-screenshot.jpg" target="_blank"><img src="assets\CT-screenshot.jpg" width="33%"/></a>
+				</div>
 				<hr>
 				<div class="projectSummaryClass">
 					<h2><a href="https://github.com/brucecooner/EarthSlicer" target="_blank" title="code on github">Earth Slicer</a></h2>

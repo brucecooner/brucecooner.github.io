@@ -7,7 +7,7 @@ const creativeColumnContent =
 	{ "span" : "I document most of my creative projects in an album on "},
 	{ "a" : {"href" : "https://www.flickr.com/photos/woodbits/albums/72157594222510335/", "innerHTML": "Flickr", "target":"_blank"}},
 	{ "br" : {} },
-	{ "span" : "Or you can check out a few of my 3-d models for laser cutting I've designed at "},
+	{ "span" : "Or you can check out a few of the 3-d models for laser cutting I've designed at "},
 	{ "a" : {"href" : "https://www.thingiverse.com/bruce_cooner/designs", "innerHTML": "Thingiverse", "target":"_blank"}},
 	{ "br" : "" },
 	{ "span" : "Check out my etsy shop, where I sell laser engraved automotive minatures: "},
@@ -16,7 +16,8 @@ const creativeColumnContent =
 
 	{ "h2": "Iron Man Mk III helmet" },
 	{ "span": {"innerHTML" : "(vector design / laser cutting/engraving)", "class":"projectTypeClass"} },
-	{"p" : "I made a laser cut rendition of Tony Stark's MK III helmet as a gift for a friend. I designed it with \
+	{ "br" : "" },
+	{"p" : "I designed and built a laser cut rendition of Tony Stark's MK III helmet as a gift for a friend. I gave it \
 			acrylic eyes lit by LEDs inside the helmet, which considerably complicated its design and construction.<br> \
 			The results were worth it though, and this remains one of my favorite projects."},
 	{ "a" :	{ "href" : ".\\assets\\iron_man_mkiii_2.jpg", "target" : "_blank",
@@ -28,9 +29,11 @@ const creativeColumnContent =
 	{ "a" :	{ "href" : ".\\assets\\iron_man_mkiii_1.jpg", "target" : "_blank",
 					"children" : {"img" : {"src": "assets\\iron_man_mkiii_1.jpg", "style":{"width":"15%"}, "alt":"small laser cut cardboard model rocket ship"}}
 				}},
+	{ "hr" : {}},
 
 	{ "h2": "automotive art" },
 	{ "span": {"innerHTML" : "(vector design / laser cutting/engraving)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{"p" : "After owning a Glowforge laser cutter for a while, my interest in automobiles and miniatures drew me to creating \
 			fridge magnets modeled after classic vehicles.<br> This became an etsy shop, Laser Wheels, where I've sold thousands of \
 			 examples of my work.<br> \
@@ -52,6 +55,7 @@ const creativeColumnContent =
 
 	{ "h2": "laser cut models" },
 	{ "span": {"innerHTML" : "(3d design / laser cutting)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{"p" : "I bought a Glowforge laser cutter during their KickStarter, mostly to experiment with making laser cut 3d models.<br>\
 				My first attempt at my own design was a 'stubby' rocket ship reminiscent of retro and classic sci-fi.<br>\
 				I had to teach myself 3d modeling (Fusion) and overcome some new problems I'd never encountered before,\
@@ -73,6 +77,7 @@ const creativeColumnContent =
 
 	{ "h2": "driving cockpit simulator" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{"p" : "A coworker wanted a driving simulator cockpit that exactly matched the dimensions of his real BMW M3,\
 				to which he could mount the driver's seat from a real car and a very expensive steering wheel controller.\
 				We went with pine for most of the material, and added a lot of brackets for stability.\
@@ -87,6 +92,7 @@ const creativeColumnContent =
 
 	{ "h2" : "wooden jewelry" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{ "p" : "For a while I made wooden jewelry using some of the endless supply of mesquite prunings from a tree in our backyard.<br>\
 				My favorite type incorporated stones in a wire cage weaved into the wood. I also made a few pieces with a miniature cacti carved \
 				into the center, which were fun. Also fun was using copper power or red sand from the red rocks around Sedona for inlay work."},
@@ -106,6 +112,7 @@ const creativeColumnContent =
 
 	{ "h2": "K-leg shelf" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{"p" : "My wife requested a small three level shelf for her office space, and I took the opportunity to use a design I came\
 				up with years ago that I call the 'K Leg', where the front legs are an X with the cross pushed back so that\
 				viewed from the side they form the shape of the letter K.<br>I love the cantilever effect this gave the middle shelf,\
@@ -117,6 +124,7 @@ const creativeColumnContent =
 
 	{ "h2" : "Minecraft pig clock" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{ "p" : "I played Minecraft for a while, primarily on a server run by a friend.<br>\
 				For his birthday gift one year I crafted a whimsical clock modeled after the pig seen in the game."},
 	{ "a" :	{ "href" : ".\\assets\\mc_pig_clock.jpg", "target" : "_blank",
@@ -126,6 +134,7 @@ const creativeColumnContent =
 
 	{ "h2" : "saguaro @ sunset clock" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{ "p" : "For a while I made almost nothing but clocks. After getting a bunch of castoff stock from a friend's father's cabinet shop,\
 				I used some of it to create a clock inspired by a common scene in the desert where I live, viewing the setting sun between\
 				the arms of a saguaro cactus."},
@@ -136,6 +145,7 @@ const creativeColumnContent =
 
 	{ "h2" : "lamp base" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{ "p" : "Years ago we bought a floor lamp which, like so many, was attached to an incompetent base. I removed it from the poorly engineered one \
 				and created this three legged model with more support which has served as a stable footing for it to this day."},
 	{ "a" :	{ "href" : ".\\assets\\lamp_3leg_base.jpg", "target" : "_blank",
@@ -145,6 +155,7 @@ const creativeColumnContent =
 
 	{ "h2" : "arbor" },
 	{ "span": {"innerHTML" : "(woodworking)", "class":"projectTypeClass"} },
+	{ "br" : "" },
 	{ "p" : "When we moved into our current home, there was a large bougainvillea over the front sidewalk, but it was draped over several small arbors made \
 				from thin metal rods and lashed together which were insufficient to hold up the plant's weight. I replaced that with one I built from \
 				redwood which was much stronger, and also took advantage of the archway where it was placed for added support. It did its job for \

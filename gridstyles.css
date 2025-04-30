@@ -3,8 +3,8 @@
 	--bright-text-color: rgb(200, 200, 200);
 	--dark-text-color: rgb(100,100,100);
 
-	--header-background-color: #3e3e3f;
-	--header-gradient-bottom: #2b2b2c;
+	--header-background-color: #27344b;
+	--header-gradient-bottom: #131627;
 
 	--visited-link-color: rgb(180,180,180);
 }
@@ -39,7 +39,7 @@ h3
 }
 p
 {
-	margin:4px;
+	margin:6px;
 	line-height: 130%;
 	font-weight:bold;
 }
@@ -181,11 +181,12 @@ h1.columnTitleHeaderClass
 	z-index: -1;
 }
 
-.flexCenterClass
+
+/* .flexCenterClass
 {
 	display: flex;
 	justify-content: center;
-}
+} */
 
 /* code column ---------------------------------------------------------- */
 .codeColumnClass

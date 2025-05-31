@@ -239,11 +239,12 @@
 					<br>
 					<p>My personal coding projects usually support a creative endeavor.<br>
 					I may make something to explore visual art, or to assist in the creation of a physical model.<br>
+					Some projects cross pollinate my obsession with geomorphology and topography with my creativity.
 					<br>
-					This section of the site details personal software projects I've found the most interesting.<br>
-					They span several languages, and hopefully illustrate how I approach software development, breaking down problems into well
-					defined chunks and writing (I hope) well documented and easy to understand code (usually).<br>
-					Feel free to check out the included repo links and have a closer look at the code.<br>
+					This section of the site details a few personal software projects I've found the most interesting.<br>
+					These projects span several languages, and hopefully illustrate how I approach software development,<br>
+					 breaking down problems into well defined chunks and writing (I hope) well documented and easy to understand code.<br>
+					Check out the included repo links for a closer look at the code.<br>
 					</p>
 				<hr>
 				<div class="projectSummaryClass">
@@ -253,12 +254,12 @@
 					<span>find your elevation:  <a href="https://casualtopography.com/" target="_blank">https://casualtopography.com/</a></span><br>
 					<br>
 					<p>
-					Casual Topography is an exercise for learning a little about Google Maps, and it gave me a chance to use what I learned
-					making EarthSlicer (see below),<br> but in something that is interactive.<br>
-					It's a Google Map where you can hover over a point (or touch on touch devices) to see the elevation of that point.<br>
-					The data is pulled from the USGS Elevation Point Query Service, so it's limited to North America.<br>
-					There are other sites where you can view elevation, but the ones I've found all involve a convoluted interface, so I made something
-					where it's quick and easy to see what I'm interested in.
+					Casual Topography was an exercise in learning to use the Google Maps API as well as using what I learned
+					making EarthSlicer (see below), but in an interactive website.<br>
+					You can hover over a point on a Google Map (or touch on touch devices) to see the height above sea level of that point.<br>
+					The data is pulled from the USGS Elevation Point Query Service, so is unfortunately limited to North America.<br>
+					Ive used other sites to explore elevations, but they all involve a rather convoluted interface, so I made something
+					where I could quickly and easily discover just how high that overlook where I stood on vacation was.
 					</p>
 					<a href=".\assets\CT-screenshot.jpg" target="_blank"><img src="assets\CT-screenshot.jpg" width="33%"/></a>
 				</div>
@@ -269,12 +270,13 @@
 					<p>
 					This project grew from my frustrations trying to make topographical models using the previous project (FLT to Topo, see below).
 					A top down topograpical model can require a lot of individual pieces, which all have to be correctly positioned.<br><br>
-					So I turned the problem on its side and instead of tracing isolines, I traced elevation along vertical "slices" of earth,
-					which then just get stacked next to each other to create the model.  This reduced registration (correct placement) to a one dimensional problem.<br>
+					So I turned the problem on its side and, instead of tracing isolines, I traced elevation along lines or "slices" of earth,
+					which then just get stacked next to each other to create the model.<br>
+					This reduced registration (correct placement) to a much simpler, one dimensional problem.<br>
 					<br>
 					For this project I switched from C# to Python, but the biggest functional change was using the USGS elevation point query
 					service to get elevations instead of downloading large datasets, which greatly simplified the workflow.<br>
-					I quickly found however that querying the elevations serially was too slow, so I refactored the query code to issue parallel queries. 
+					I quickly found that querying the elevations serially for thousands of points was very slow, so I refactored the query code to issue parallel queries. <br>
 					Another optimization was to cache returned elevations in a local text file, so running a job second and multiple times did not 
 					even need to query the server.<br>
 					This app was written to output the slices in svg files ready to load and use in the laser cutter without requiring any further workflow steps.
